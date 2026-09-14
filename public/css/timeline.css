@@ -1,0 +1,329 @@
+/* Base Layout & Grid System */
+.timeline-grid {
+    display: grid;
+    grid-template-columns: 80px 1fr 1fr;
+    gap: 1rem;
+}
+
+/* Icon Utilities */
+.ability-icon {
+    width: 24px;
+    height: 24px;
+    display: inline-block;
+    vertical-align: middle;
+    margin-right: 4px;
+}
+
+/* Visibility Control */
+.force-hidden {
+    display: none !important;
+}
+
+/* Optimized Player Column Toggling */
+.hide-players .player-col {
+    display: none !important;
+}
+
+/* Table Border System (No Gaps, Single Border) */
+table {
+    border-spacing: 0;
+    /* Outer Frame: Top & Left */
+    border-top: 1px solid #374151;
+    /* gray-700 */
+    border-left: 1px solid #374151;
+    /* gray-700 */
+}
+
+th,
+td {
+    /* Inner Grid: Right & Bottom */
+    border-right: 1px solid #374151;
+    /* gray-700 */
+    border-bottom: 1px solid #374151;
+    /* gray-700 */
+}
+
+/* Sticky Column Divider */
+.sticky-divider {
+    border-right: 1px solid #4b5563 !important;
+    /* gray-600 */
+}
+
+/* Reset default outlines */
+*:focus {
+    outline: none;
+}
+
+/* ===== パフォーマンス最適化 ===== */
+/* 画面外の行はブラウザがレンダリングをスキップする（長大なテーブルの描画を軽量化）。
+   contain-intrinsic-size で行高を見積もり、スクロールバーの安定を保つ。 */
+tbody tr {
+    content-visibility: auto;
+    contain-intrinsic-size: auto 33px;
+}
+
+/* 左端固定列（Time / Action / Base / Hit）をクラス化し、行ごとのインラインstyleを排除してHTMLを軽量化 */
+.c-time {
+    position: sticky;
+    left: 0;
+    z-index: 40;
+}
+
+.c-action {
+    position: sticky;
+    left: 4rem;
+    z-index: 40;
+}
+
+.c-base {
+    position: sticky;
+    left: 12rem;
+    z-index: 40;
+}
+
+.c-hit {
+    position: sticky;
+    left: 16rem;
+    z-index: 40;
+}
+
+/* ===== フェーズ列（Timeの左・マルチフェーズのボスのみ表示）===== */
+.c-phase {
+    position: sticky;
+    left: 0;
+    z-index: 40;
+    width: 3rem;
+    min-width: 3rem;
+    border-right: 2px solid #4b5563;
+}
+
+/* フェーズ列がある時は左端固定列を3rem分ずらす */
+.has-phase .c-time {
+    left: 3rem;
+}
+
+.has-phase .c-action {
+    left: 7rem;
+}
+
+.has-phase .c-base {
+    left: 15rem;
+}
+
+.has-phase .c-hit {
+    left: 19rem;
+}
+
+/* フェーズごとの色分け（背景＋左アクセント）。空セルでも帯が連続して見える */
+.phase-p1 {
+    background-color: rgba(59, 130, 246, 0.16) !important;
+    box-shadow: inset 4px 0 0 #3b82f6;
+    color: #93c5fd;
+}
+
+.phase-p2 {
+    background-color: rgba(34, 197, 94, 0.16) !important;
+    box-shadow: inset 4px 0 0 #22c55e;
+    color: #86efac;
+}
+
+.phase-p3 {
+    background-color: rgba(234, 179, 8, 0.16) !important;
+    box-shadow: inset 4px 0 0 #eab308;
+    color: #fde047;
+}
+
+.phase-p4 {
+    background-color: rgba(168, 85, 247, 0.18) !important;
+    box-shadow: inset 4px 0 0 #a855f7;
+    color: #d8b4fe;
+}
+
+.phase-p5 {
+    background-color: rgba(239, 68, 68, 0.18) !important;
+    box-shadow: inset 4px 0 0 #ef4444;
+    color: #fca5a5;
+}
+
+.phase-p0 {
+    background-color: rgba(148, 163, 184, 0.18) !important;
+    box-shadow: inset 4px 0 0 #94a3b8;
+    color: #cbd5e1;
+}
+
+/* ===== 軽減セル：チェックボックス風UI（SVG・グリフ非依存・CSSのみで描画） ===== */
+.mit {
+    position: relative;
+    width: 2rem;
+    height: 1.6rem;
+    padding: 0;
+    text-align: center;
+}
+
+/* チェックボックスの箱（::before） */
+.mit::before {
+    content: "";
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 1.1rem;
+    height: 1.1rem;
+    transform: translate(-50%, -50%);
+    border-radius: 3px;
+    box-sizing: border-box;
+}
+
+/* 非アクティブ：薄い空枠（アクティブ列を目立たせる） */
+.mit-off::before {
+    background: #1b2330;
+    border: 1px solid #3a4659;
+    opacity: 0.4;
+}
+
+/* リキャスト中：セル背景を琥珀色で帯状に着色（連続するとバンドになり、帯が切れた行＝再使用可能） */
+.mit-cd {
+    background: rgba(245, 158, 11, 0.14);
+    /* amber-500 dim */
+}
+
+.mit-cd::before {
+    background: #2a2212;
+    border: 1px dashed #b45309;
+    /* amber-700 破線＝充填中 */
+    opacity: 0.85;
+}
+
+/* アクティブ（被弾軽減）／効果中／使用：すべて同じ青の塗りボックス＋白チェックに統一 */
+.mit-on::before,
+.mit-up::before,
+.mit-used::before {
+    background: #2563eb;
+    /* blue-600 */
+    border: 1px solid #93c5fd;
+    box-shadow: 0 0 4px rgba(59, 130, 246, 0.8);
+}
+
+/* 使用マーカーのみ：チェックは同じだが、使った瞬間だと分かるよう枠を白く・光彩を強める */
+.mit-used::before {
+    border: 1px solid #ffffff;
+    box-shadow: 0 0 7px rgba(147, 197, 253, 1);
+}
+
+/* バリア破壊：塗りつぶしの箱（赤） */
+.mit-x::before {
+    background: #dc2626;
+    /* red-600 */
+    border: 1px solid #fca5a5;
+    box-shadow: 0 0 4px rgba(239, 68, 68, 0.8);
+}
+
+/* チェックマーク（::after）：白い線をボーダーで描画。フォント非依存で常にくっきり */
+.mit-on::after,
+.mit-x::after,
+.mit-up::after,
+.mit-used::after {
+    content: "";
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 0.32rem;
+    height: 0.62rem;
+    border: solid #fff;
+    border-width: 0 0.17rem 0.17rem 0;
+    transform: translate(-55%, -62%) rotate(45deg);
+}
+
+/* ===== シナジービュー ===== */
+/* バースト窓ヘッダ */
+.syn-window-head {
+    background: linear-gradient(90deg, rgba(245, 158, 11, 0.18), rgba(245, 158, 11, 0.02));
+    border-bottom: 1px solid rgba(245, 158, 11, 0.3);
+}
+
+/* クールタイム種別バッジ（最低1rem以上で可読性確保） */
+.syn-badge {
+    display: inline-block;
+    font-size: 1rem;
+    font-weight: 700;
+    padding: 0.05rem 0.55rem;
+    border-radius: 5px;
+    white-space: nowrap;
+    width: 3.2rem;
+    text-align: center;
+}
+
+/* 行ごとのクールタイム種別：左ボーダー＋バッジ色分け */
+.syn-cd120 {
+    box-shadow: inset 4px 0 0 #f59e0b;
+    /* 120秒＝琥珀 */
+}
+
+.syn-cd120 .syn-badge {
+    background: rgba(245, 158, 11, 0.22);
+    color: #fcd34d;
+}
+
+.syn-cd60 {
+    box-shadow: inset 4px 0 0 #3b82f6;
+    /* 60秒＝青 */
+}
+
+.syn-cd60 .syn-badge {
+    background: rgba(59, 130, 246, 0.22);
+    color: #93c5fd;
+}
+
+.syn-item {
+    box-shadow: inset 4px 0 0 #22c55e;
+    /* 薬＝緑 */
+}
+
+.syn-item .syn-badge {
+    background: rgba(34, 197, 94, 0.22);
+    color: #86efac;
+}
+
+.syn-other {
+    box-shadow: inset 4px 0 0 #6b7280;
+}
+
+.syn-other .syn-badge {
+    background: rgba(107, 114, 128, 0.22);
+    color: #d1d5db;
+}
+
+/* スキルチップ（人単位の行で、その人が使った各スキルを表示） */
+.syn-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    padding: 0.14rem 0.55rem;
+    border-radius: 6px;
+    font-size: 1rem;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.chip-cd120 {
+    background: rgba(245, 158, 11, 0.22);
+    color: #fcd34d;
+    border: 1px solid rgba(245, 158, 11, 0.45);
+}
+
+.chip-cd60 {
+    background: rgba(59, 130, 246, 0.22);
+    color: #93c5fd;
+    border: 1px solid rgba(59, 130, 246, 0.45);
+}
+
+.chip-other {
+    background: rgba(107, 114, 128, 0.25);
+    color: #e5e7eb;
+    border: 1px solid rgba(107, 114, 128, 0.5);
+}
+
+.chip-item {
+    background: rgba(34, 197, 94, 0.22);
+    color: #86efac;
+    border: 1px solid rgba(34, 197, 94, 0.45);
+}
