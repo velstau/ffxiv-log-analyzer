@@ -128,6 +128,15 @@ GitHub Actions で push / PR ごとに lint とテストを回している（`.g
 
 ## ライセンス・権利表記
 
-本リポジトリのコードは作者によるもの。ライセンスは明示していない。
-FINAL FANTASY XIV の関連素材・名称の権利は © SQUARE ENIX CO., LTD. に帰属する。
-FFLogs は FFLogs の運営者に帰属し、本ツールは非公式・個人利用のためのもの。
+このリポジトリは **閲覧していただくことを目的として** 公開しています。
+
+ライセンスは付与していないため、著作権法の原則どおり著作権者がすべての権利を留保します。
+コードの複製・改変・再配布は許可していません。
+（GitHub 上での fork は、public リポジトリに対して
+[GitHub 利用規約](https://docs.github.com/site-policy/github-terms/github-terms-of-service)
+が許諾している範囲の行為として可能です。）
+
+利用をご希望の場合はご連絡ください。
+
+FINAL FANTASY XIV の関連素材・名称の権利は © SQUARE ENIX CO., LTD. に帰属します。
+FFLogs は FFLogs の運営者に帰属し、本ツールは非公式・個人利用のためのものです。
