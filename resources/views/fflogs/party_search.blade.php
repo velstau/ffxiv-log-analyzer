@@ -301,6 +301,7 @@
         renderEncounters(INITIAL_ENCOUNTER);
         render();
     </script>
+    <div class="flex justify-center pb-8">@include('_copyright')</div>
 </body>
 
 </html>

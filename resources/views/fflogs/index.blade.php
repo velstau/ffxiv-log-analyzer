@@ -8,7 +8,7 @@
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
 </head>
 
-<body class="bg-gray-900 text-gray-100 min-h-screen flex items-center justify-center">
+<body class="bg-gray-900 text-gray-100 min-h-screen flex flex-col items-center justify-center">
     <div class="w-full max-w-lg p-8 bg-gray-800 rounded-lg shadow-xl">
         <h1 class="text-3xl font-bold mb-6 text-center text-indigo-400">FFLogs Timeline Viewer</h1>
 
@@ -42,6 +42,7 @@
             <a href="{{ url('/') }}" class="text-gray-400 hover:text-indigo-400 underline" style="font-size:1rem;">← 目次へ</a>
         </div>
     </div>
+    @include('_copyright')
 </body>
 
 </html>

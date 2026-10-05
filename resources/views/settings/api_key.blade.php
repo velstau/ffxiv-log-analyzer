@@ -8,7 +8,7 @@
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
 </head>
 
-<body class="bg-gray-900 text-gray-100 min-h-screen flex items-start justify-center py-10 px-4">
+<body class="bg-gray-900 text-gray-100 min-h-screen flex flex-col items-center justify-start py-10 px-4">
     <div class="w-full max-w-2xl p-8 bg-gray-800 rounded-lg shadow-xl text-base">
         <h1 class="text-2xl font-bold mb-2 text-indigo-400">FFLogs API キーの設定</h1>
         <p class="text-gray-300 mb-6">
@@ -92,6 +92,7 @@
             <a href="{{ url('/') }}" class="text-gray-400 hover:text-indigo-400 underline">← 目次へ</a>
         </div>
     </div>
+    @include('_copyright')
 </body>
 
 </html>

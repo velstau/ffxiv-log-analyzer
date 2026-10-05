@@ -8,7 +8,7 @@
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
 </head>
 
-<body class="bg-gray-900 text-gray-100 min-h-screen flex items-center justify-center">
+<body class="bg-gray-900 text-gray-100 min-h-screen flex flex-col items-center justify-center">
     <div class="w-full max-w-xl p-8 bg-gray-800 rounded-lg shadow-xl">
         <h1 class="text-2xl font-bold mb-2 text-center text-indigo-400">パーティ A/B 火力・ローテ比較</h1>
         <p class="text-center text-gray-400 mb-6" style="font-size:1rem;">同じボスの2ログを、フェーズ別・分別に比較します。</p>
@@ -47,6 +47,7 @@
             <a href="{{ url('/') }}" class="text-gray-400 hover:text-indigo-400 underline" style="font-size:1rem;">← 目次へ</a>
         </div>
     </div>
+    @include('_copyright')
 </body>
 
 </html>

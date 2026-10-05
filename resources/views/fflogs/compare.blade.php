@@ -785,6 +785,7 @@
         })();
     </script>
 
+    <div class="flex justify-center pb-8">@include('_copyright')</div>
 </body>
 
 </html>

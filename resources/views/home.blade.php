@@ -8,7 +8,7 @@
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
 </head>
 
-<body class="bg-gray-900 text-gray-100 min-h-screen flex items-center justify-center py-10">
+<body class="bg-gray-900 text-gray-100 min-h-screen flex flex-col items-center justify-center py-10">
     <div class="w-full max-w-3xl px-6">
         <h1 class="text-3xl font-bold text-center text-indigo-400">FFLogs ツール</h1>
         <p class="text-center text-gray-400 mt-2 mb-8" style="font-size:1rem;">FFLogs のログを読み解くための道具箱です。</p>
@@ -50,6 +50,7 @@
             </a>
         </div>
     </div>
+    @include('_copyright')
 </body>
 
 </html>

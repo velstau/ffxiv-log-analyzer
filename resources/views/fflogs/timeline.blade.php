@@ -747,6 +747,7 @@
             </div>
         </div>
     </div>
+    @include('_copyright', ['compact' => true])
 </body>
 
 </html>
