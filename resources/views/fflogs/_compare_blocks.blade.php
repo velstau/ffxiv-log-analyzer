@@ -125,11 +125,11 @@
                 @if ($a)
                     <div class="nm">@if ($aHasPot)<span class="pot" title="{{ $potTitle($a) }}">▶{{ $fmt($apot) }}</span> @endif<span style="color: {{ $a['color'] }};">{{ $a['name'] }}</span>
                         <span class="text-gray-500" title="Active {{ $a['activePct'] }}%">({{ round($a['activePct']) }}%)</span>
-                        @if ($a['iconFile'])<img class="jobicon ml-1" src="/icons/jobs/{{ $a['iconFile'] }}.png" onerror="this.style.display='none'">@endif
+                        @if ($a['iconFile'])<img class="jobicon ml-1" src="{{ asset('icons') }}/jobs/{{ $a['iconFile'] }}.png" onerror="this.style.display='none'">@endif
                     </div>
                     <div class="stat">
                         @if (!empty($a['potion']) || !empty($a['deaths']) || ($a['ddSec'] ?? 0) >= 1)
-                            <span class="badges">@if (!empty($a['potion']))<img class="potion" src="/icons/abilities/{{ $a['potionIcon'] ?? '' }}" title="薬使用" onerror="this.style.display='none'">@endif @if (!empty($a['deaths']))<span class="skull" title="{{ $scope }}で死亡{{ $a['deaths'] }}回">💀@if ($a['deaths'] > 1)<span class="sec">×{{ $a['deaths'] }}</span>@endif</span>@endif @if (($a['ddSec'] ?? 0) >= 1)<span title="ダメージ低下デバフ {{ round($a['ddSec']) }}秒">@if (!empty($a['ddIcon']))<img class="potion" src="/icons/abilities/{{ $a['ddIcon'] }}" onerror="this.style.display='none'">@endif<span class="sec">{{ round($a['ddSec']) }}s</span></span>@endif</span>
+                            <span class="badges">@if (!empty($a['potion']))<img class="potion" src="{{ asset('icons') }}/abilities/{{ $a['potionIcon'] ?? '' }}" title="薬使用" onerror="this.style.display='none'">@endif @if (!empty($a['deaths']))<span class="skull" title="{{ $scope }}で死亡{{ $a['deaths'] }}回">💀@if ($a['deaths'] > 1)<span class="sec">×{{ $a['deaths'] }}</span>@endif</span>@endif @if (($a['ddSec'] ?? 0) >= 1)<span title="ダメージ低下デバフ {{ round($a['ddSec']) }}秒">@if (!empty($a['ddIcon']))<img class="potion" src="{{ asset('icons') }}/abilities/{{ $a['ddIcon'] }}" onerror="this.style.display='none'">@endif<span class="sec">{{ round($a['ddSec']) }}s</span></span>@endif</span>
                         @endif
                         <span class="sub">D{{ $fmt($a['dps']) }}/a{{ $fmt($a['adps']) }}</span>
                         <span class="rd {{ $d < 0 ? 'text-blue-300' : 'text-white' }}">{{ $fmt($a['rdps']) }}</span>
@@ -143,14 +143,14 @@
             {{-- B：職アイコン＋フルネーム(Active%) / rDPS・DPS・aDPS --}}
             <div class="b-info">
                 @if ($b)
-                    <div class="nm">@if ($b['iconFile'])<img class="jobicon mr-1" src="/icons/jobs/{{ $b['iconFile'] }}.png" onerror="this.style.display='none'">@endif<span style="color: {{ $b['color'] }};">{{ $b['name'] }}</span>
+                    <div class="nm">@if ($b['iconFile'])<img class="jobicon mr-1" src="{{ asset('icons') }}/jobs/{{ $b['iconFile'] }}.png" onerror="this.style.display='none'">@endif<span style="color: {{ $b['color'] }};">{{ $b['name'] }}</span>
                         <span class="text-gray-500" title="Active {{ $b['activePct'] }}%">({{ round($b['activePct']) }}%)</span>@if ($bHasPot) <span class="pot" title="{{ $potTitle($b) }}">▶{{ $fmt($bpot) }}</span>@endif
                     </div>
                     <div class="stat">
                         <span class="rd {{ $d > 0 ? 'text-rose-300' : 'text-white' }}">{{ $fmt($b['rdps']) }}</span>
                         <span class="sub">D{{ $fmt($b['dps']) }}/a{{ $fmt($b['adps']) }}</span>
                         @if (!empty($b['potion']) || !empty($b['deaths']) || ($b['ddSec'] ?? 0) >= 1)
-                            <span class="badges">@if (!empty($b['potion']))<img class="potion" src="/icons/abilities/{{ $b['potionIcon'] ?? '' }}" title="薬使用" onerror="this.style.display='none'">@endif @if (!empty($b['deaths']))<span class="skull" title="{{ $scope }}で死亡{{ $b['deaths'] }}回">💀@if ($b['deaths'] > 1)<span class="sec">×{{ $b['deaths'] }}</span>@endif</span>@endif @if (($b['ddSec'] ?? 0) >= 1)<span title="ダメージ低下デバフ {{ round($b['ddSec']) }}秒">@if (!empty($b['ddIcon']))<img class="potion" src="/icons/abilities/{{ $b['ddIcon'] }}" onerror="this.style.display='none'">@endif<span class="sec">{{ round($b['ddSec']) }}s</span></span>@endif</span>
+                            <span class="badges">@if (!empty($b['potion']))<img class="potion" src="{{ asset('icons') }}/abilities/{{ $b['potionIcon'] ?? '' }}" title="薬使用" onerror="this.style.display='none'">@endif @if (!empty($b['deaths']))<span class="skull" title="{{ $scope }}で死亡{{ $b['deaths'] }}回">💀@if ($b['deaths'] > 1)<span class="sec">×{{ $b['deaths'] }}</span>@endif</span>@endif @if (($b['ddSec'] ?? 0) >= 1)<span title="ダメージ低下デバフ {{ round($b['ddSec']) }}秒">@if (!empty($b['ddIcon']))<img class="potion" src="{{ asset('icons') }}/abilities/{{ $b['ddIcon'] }}" onerror="this.style.display='none'">@endif<span class="sec">{{ round($b['ddSec']) }}s</span></span>@endif</span>
                         @endif
                     </div>
                 @else

@@ -230,7 +230,7 @@
         <section class="mb-8">
             <h2 class="text-xl font-bold text-indigo-300 mb-2 border-b border-gray-700 pb-1">フェーズ別 火力（個人別 A/B 比較）</h2>
             <p class="text-sm text-gray-400 mb-3"><span class="text-blue-300">A=左/青</span>・<span class="text-rose-300">B=右/赤</span>のバーが中央で対向（バー長＝rDPS、長い方が優勢／バー上＝総ダメージ）。
-                名前の（）はActive%、大きい数字＝rDPS、小さい字＝DPS・aDPS。<img class="potion" src="/icons/abilities/020000-020710.png" onerror="this.style.display='none'">=薬・💀=死亡・<img class="potion" src="/icons/abilities/215000-215520.png" onerror="this.style.display='none'"><span class="text-orange-400">ns</span>=ダメージ低下デバフn秒被弾。
+                名前の（）はActive%、大きい数字＝rDPS、小さい字＝DPS・aDPS。<img class="potion" src="{{ asset('icons') }}/abilities/020000-020710.png" onerror="this.style.display='none'">=薬・💀=死亡・<img class="potion" src="{{ asset('icons') }}/abilities/215000-215520.png" onerror="this.style.display='none'"><span class="text-orange-400">ns</span>=ダメージ低下デバフn秒被弾。
                 <span class="pot">▶n</span>と<span class="text-gray-300" style="border: 1px dashed #94a3b8; padding: 0 3px;">斜線バー</span>=死亡・衰弱・ダメ低下が無かった場合の想定rDPS（ホバーで内訳）。差はB−A。同ジョブ不在時は<span class="text-amber-200">同ロール</span>で対戦（≈）。</p>
 
             @foreach ($phaseIds as $pid)

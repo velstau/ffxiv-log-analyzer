@@ -1784,7 +1784,7 @@ class TimelineBuilder
         $mitigationGroupIcons = [];
         foreach ($mitigationGroups as $groupName => $_) {
             if (isset($jobIconNameMap[$groupName])) {
-                $mitigationGroupIcons[$groupName] = "/icons/jobs/" . $jobIconNameMap[$groupName] . ".png"; // ローカル配信
+                $mitigationGroupIcons[$groupName] = asset("icons/jobs/" . $jobIconNameMap[$groupName] . ".png"); // ローカル配信
             }
         }
 
@@ -1855,7 +1855,7 @@ class TimelineBuilder
 
                 // Use mapped name if available, otherwise fallback to lower case subType
                 $fileName = $jobIconNameMap[$jobKey] ?? strtolower($subType);
-                $icon = "/icons/jobs/" . $fileName . ".png"; // ローカル配信（初回DL後はnginx直配信）
+                $icon = asset("icons/jobs/" . $fileName . ".png"); // ローカル配信（初回DL後はnginx直配信）
             }
 
             $playerDetails[$pName] = [

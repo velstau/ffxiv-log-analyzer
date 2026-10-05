@@ -129,7 +129,7 @@
                         @foreach ($group['jobs'] as $type => $job)
                             <button type="button" class="job-btn flex items-center px-2 py-1 bg-gray-700 hover:bg-gray-600 border border-gray-600 rounded"
                                 data-job="{{ $type }}" title="{{ $job['ja'] }}">
-                                <img src="{{ $job['icon'] }}" alt="{{ $job['ja'] }}">
+                                <img src="{{ asset($job['icon']) }}" alt="{{ $job['ja'] }}">
                                 <span class="ml-1 text-gray-200" style="font-size:0.85rem;">{{ $job['ja'] }}</span>
                             </button>
                         @endforeach
@@ -194,7 +194,7 @@
                                         <td class="px-3 py-2">
                                             <div class="flex items-center gap-1">
                                                 @foreach ($row['jobs'] as $job)
-                                                    <img src="{{ $job['icon'] }}" alt="{{ $job['ja'] }}" title="{{ $job['ja'] }}"
+                                                    <img src="{{ asset($job['icon']) }}" alt="{{ $job['ja'] }}" title="{{ $job['ja'] }}"
                                                         style="width:26px;height:26px;">
                                                 @endforeach
                                             </div>

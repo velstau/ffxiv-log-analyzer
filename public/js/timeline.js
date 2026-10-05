@@ -1,3 +1,6 @@
+// アイコンの配信元（サブパス配信に対応するため Blade から受け取る）
+const ICON_BASE = window.ICON_BASE || "/icons";
+
 function togglePlayers() {
     document.body.classList.toggle("hide-players");
 }
@@ -277,7 +280,7 @@ function openPlayerTimeline(playerName) {
         timeline.forEach(event => {
             const timeStr = formatTime(event.rel_time);
             const iconUrl = event.icon ?
-                `/icons/abilities/${event.icon}` :
+                `${ICON_BASE}/abilities/${event.icon}` :
                 null;
 
             const iconHtml = iconUrl ?
@@ -417,7 +420,7 @@ function openActionDetail(actionName, actionTime) {
             const meta = mitCols[colKey] || {};
             const displayName = meta.name || colKey;
             const skillIcon = meta.icon
-                ? `<img src="/icons/abilities/${meta.icon}" class="w-6 h-6 object-contain rounded-sm border border-gray-600 inline-block mr-2 align-middle">`
+                ? `<img src="${ICON_BASE}/abilities/${meta.icon}" class="w-6 h-6 object-contain rounded-sm border border-gray-600 inline-block mr-2 align-middle">`
                 : '';
             const brokenTag = col.is_broken ? " <span title='バリア消滅' class='text-red-400 text-xs'>💔</span>" : "";
 
@@ -900,7 +903,7 @@ function openDamageDetail(actionName, actionTime) {
         for (const row of chain.rows) {
             const e = row.e;
             const icon = e.icon
-                ? `<img src="/icons/abilities/${e.icon}" class="w-6 h-6 object-contain rounded-sm border border-gray-600 inline-block mr-2 align-middle">` : '';
+                ? `<img src="${ICON_BASE}/abilities/${e.icon}" class="w-6 h-6 object-contain rounded-sm border border-gray-600 inline-block mr-2 align-middle">` : '';
             const srcHtml = e.sources.length
                 ? e.sources.map(sv => {
                     const pd = playerDetails[sv] || {};
@@ -977,7 +980,7 @@ function openDamageDetail(actionName, actionTime) {
     } else {
         for (const e of barrierSkills) {
             const icon = e.icon
-                ? `<img src="/icons/abilities/${e.icon}" class="w-6 h-6 object-contain rounded-sm border border-gray-600 inline-block mr-2 align-middle">` : '';
+                ? `<img src="${ICON_BASE}/abilities/${e.icon}" class="w-6 h-6 object-contain rounded-sm border border-gray-600 inline-block mr-2 align-middle">` : '';
             const srcHtml = e.sources.length
                 ? e.sources.map(sv => {
                     const pd = playerDetails[sv] || {};

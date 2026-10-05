@@ -6,7 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Timeline - {{ $fight['name'] }}</title>
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
-    <link href="/css/timeline.css?v={{ @filemtime(public_path('css/timeline.css')) }}" rel="stylesheet">
+    <link href="{{ asset('css/timeline.css') }}?v={{ @filemtime(public_path('css/timeline.css')) }}" rel="stylesheet">
 </head>
 
 <body class="bg-gray-900 text-gray-200 h-screen w-screen overflow-hidden flex flex-col m-0">
@@ -45,9 +45,10 @@
                         window.enemyEvents = @json($events);
                         window.mitCols = @json($mitigationColumns);
                         window.fightMetadata = @json($fight);
+                        window.ICON_BASE = @json(asset('icons'));
                     </script>
                     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-                    <script src="/js/timeline.js?v={{ @filemtime(public_path('js/timeline.js')) }}"></script>
+                    <script src="{{ asset('js/timeline.js') }}?v={{ @filemtime(public_path('js/timeline.js')) }}"></script>
                     <p class="text-gray-400 text-sm ml-4 border-l border-gray-600 pl-4 h-full flex items-center">
                         Duration:
                         {{ gmdate('i:s', ($fight['endTime'] - $fight['startTime']) / 1000) }}</p>
@@ -141,7 +142,7 @@
                                 @php $skillName = $col['name'] ?? $key; @endphp
                                 <div class="flex flex-col items-center justify-center">
                                     @if ($col['icon'])
-                                        <img src="/icons/abilities/{{ $col['icon'] }}"
+                                        <img src="{{ asset('icons') }}/abilities/{{ $col['icon'] }}"
                                             class="w-6 h-6 object-contain mb-1" alt="{{ $skillName }}" loading="lazy"
                                             onerror="this.style.display='none'; this.nextElementSibling.style.display='block'"
                                             title="{{ $skillName }}">
@@ -330,7 +331,7 @@
                                             @endphp
                                             <span class="syn-chip {{ $chipClass }}">
                                                 @if ($sk['skill_icon'])
-                                                    <img src="/icons/abilities/{{ $sk['skill_icon'] }}" class="w-5 h-5 object-contain" loading="lazy"
+                                                    <img src="{{ asset('icons') }}/abilities/{{ $sk['skill_icon'] }}" class="w-5 h-5 object-contain" loading="lazy"
                                                         alt="{{ $sk['skill'] }}" onerror="this.style.display='none'">
                                                 @elseif ($sk['is_item'])
                                                     <span>💊</span>
@@ -368,7 +369,7 @@
                             <span class="flex items-center gap-2 text-amber-300" style="font-size:1.05rem;">
                                 <span class="text-gray-400" style="font-size:1.0rem;">死因:</span>
                                 @if ($g['kill_ability']['icon'])
-                                    <img src="/icons/abilities/{{ $g['kill_ability']['icon'] }}" class="w-6 h-6 object-contain" loading="lazy"
+                                    <img src="{{ asset('icons') }}/abilities/{{ $g['kill_ability']['icon'] }}" class="w-6 h-6 object-contain" loading="lazy"
                                         onerror="this.style.display='none'">
                                 @endif
                                 <span class="font-bold">{{ $g['kill_ability']['name'] }}</span>
@@ -549,7 +550,7 @@
                                                 <div class="flex flex-wrap gap-1.5">
                                                     @forelse ($v['mit_up'] as $m)
                                                         <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-blue-900/30 border border-blue-700/40">
-                                                            @if ($m['icon'])<img src="/icons/abilities/{{ $m['icon'] }}" class="w-5 h-5 object-contain" loading="lazy" onerror="this.style.display='none'">@endif
+                                                            @if ($m['icon'])<img src="{{ asset('icons') }}/abilities/{{ $m['icon'] }}" class="w-5 h-5 object-contain" loading="lazy" onerror="this.style.display='none'">@endif
                                                             <span class="text-gray-200">{{ $m['name'] }}</span>
                                                         </span>
                                                     @empty
@@ -562,7 +563,7 @@
                                                 <div class="flex flex-wrap gap-1.5">
                                                     @forelse ($v['barrier_up'] as $b)
                                                         <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-cyan-900/30 border border-cyan-700/40">
-                                                            @if ($b['icon'])<img src="/icons/abilities/{{ $b['icon'] }}" class="w-5 h-5 object-contain" loading="lazy" onerror="this.style.display='none'">@endif
+                                                            @if ($b['icon'])<img src="{{ asset('icons') }}/abilities/{{ $b['icon'] }}" class="w-5 h-5 object-contain" loading="lazy" onerror="this.style.display='none'">@endif
                                                             <span class="text-gray-200">{{ $b['name'] }}</span>
                                                         </span>
                                                     @empty
@@ -593,7 +594,7 @@
                                                         {{-- とどめマーカー枠（全行固定幅でアイコン列を揃える） --}}
                                                         <span class="text-red-400 text-center shrink-0" style="width:1.1rem;font-size:1.0rem;">{{ $s['is_lethal'] ? '☠' : '' }}</span>
                                                         @if ($s['icon'])
-                                                            <img src="/icons/abilities/{{ $s['icon'] }}" class="w-5 h-5 object-contain shrink-0" loading="lazy" onerror="this.style.display='none'">
+                                                            <img src="{{ asset('icons') }}/abilities/{{ $s['icon'] }}" class="w-5 h-5 object-contain shrink-0" loading="lazy" onerror="this.style.display='none'">
                                                         @endif
                                                         <span class="text-gray-200 truncate" style="min-width:8rem;max-width:13rem;">{{ $s['name'] }}</span>
                                                         <span class="text-orange-300 font-mono">{{ number_format($s['amount']) }}</span>
