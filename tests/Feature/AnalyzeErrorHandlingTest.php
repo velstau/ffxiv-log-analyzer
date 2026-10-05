@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Services\FFLogsService;
+use App\Support\FFLogsCredentialStore;
 use Mockery;
 use PHPUnit\Framework\Attributes\Test;
 use Tests\TestCase;
@@ -15,6 +16,13 @@ use Tests\TestCase;
  */
 class AnalyzeErrorHandlingTest extends TestCase
 {
+    protected function setUp(): void
+    {
+        parent::setUp();
+        // 解析は API キーが無いと設定画面へ案内される。ここでは失敗経路だけを見たいので、キーは設定済みにする
+        $this->withCookie(FFLogsCredentialStore::COOKIE, json_encode(['id' => 'test-id', 'secret' => 'test-secret']));
+    }
+
     protected function tearDown(): void
     {
         Mockery::close();

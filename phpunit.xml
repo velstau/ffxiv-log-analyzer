@@ -21,6 +21,10 @@
         <env name="APP_ENV" value="testing"/>
         <!-- .env の APP_URL は配信サブパス付き（/ff14tools/...）なので、テストではルートに固定する -->
         <env name="APP_URL" value="http://localhost"/>
+        <!-- テストでは .env の FFLogs キーを使わない（公開版と同じく、利用者のキー＝Cookie だけで動くことを確かめる） -->
+        <env name="FFLOGS_ALLOW_SERVER_CREDENTIALS" value="false"/>
+        <env name="FFLOGS_CLIENT_ID" value=""/>
+        <env name="FFLOGS_CLIENT_SECRET" value=""/>
         <env name="APP_MAINTENANCE_DRIVER" value="file"/>
         <env name="BCRYPT_ROUNDS" value="4"/>
         <env name="BROADCAST_CONNECTION" value="null"/>

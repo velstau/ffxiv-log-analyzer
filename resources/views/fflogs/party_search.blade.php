@@ -80,6 +80,8 @@
             </script>
         @endif
 
+        @include('fflogs._api_key_status')
+
         <form action="{{ route('party_search') }}" method="POST" id="searchForm"
             class="bg-gray-800 rounded-lg shadow-xl border border-gray-700 p-5 space-y-5">
             @csrf

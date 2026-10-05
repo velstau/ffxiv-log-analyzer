@@ -2,11 +2,16 @@
 
 namespace App\Services;
 
+use App\Exceptions\FFLogsCredentialsInvalid;
+use App\Exceptions\FFLogsCredentialsMissing;
+use App\Exceptions\FFLogsCredentialsProblem;
+use App\Exceptions\FFLogsRequestFailed;
+use App\Support\FFLogsCredentialStore;
+use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Client\Pool;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
-use RuntimeException;
 
 /**
  * FFLogs API v2（GraphQL）クライアント。
@@ -24,7 +29,9 @@ use RuntimeException;
  *  - **キャッシュ書き込みの失敗で止めない。** {@see cacheRemember()} は書けなくても値を返す。
  *    キャッシュは高速化のためのものなので、書けないことを致命傷にしない。
  *
- * 認証情報は `config('services.fflogs.*')` から読む。`env()` を直接呼ぶと
+ * 認証情報（Client ID / Client Secret）は {@see FFLogsCredentialStore} から受け取る。
+ * 公開版では利用者が自分のキーを設定する（運営者のキーは使わない）。開発だけ .env のキーを使える。
+ * URL などの設定は `config('services.fflogs.*')` から読む。`env()` を直接呼ぶと
  * `php artisan config:cache` したときに null になるため使わないこと。
  */
 class FFLogsService
@@ -39,42 +46,85 @@ class FFLogsService
     /** playerDetails のバッチ（1件＝レポート25本ぶん）を並列取得するときの同時リクエスト数。 */
     private const PLAYER_DETAILS_WAVE = 20;
 
-    private readonly string $clientId;
-
-    private readonly string $clientSecret;
+    /** アクセストークンをキャッシュする秒数（FFLogs の有効期限より十分短く） */
+    private const TOKEN_TTL = 3000;
 
     private readonly string $tokenUrl;
 
     private readonly string $apiUrl;
 
-    public function __construct()
+    public function __construct(private readonly FFLogsCredentialStore $credentials)
     {
-        $this->clientId = (string) config('services.fflogs.client_id', '');
-        $this->clientSecret = (string) config('services.fflogs.client_secret', '');
         $this->tokenUrl = (string) config('services.fflogs.token_url');
         $this->apiUrl = (string) config('services.fflogs.api_url');
     }
 
     /**
-     * Get OAuth2 Access Token
+     * 今のリクエストのキーでアクセストークンを得る。
+     *
+     * トークンはキーごとに別のキャッシュに置く（キー自体はキャッシュしない。キャッシュ名はキーのハッシュ）。
+     * 取得に失敗したときはキャッシュしない。
+     *
+     * @throws FFLogsCredentialsMissing キーが設定されていない
+     * @throws FFLogsCredentialsInvalid キーでトークンを取得できない
      */
-    private function getToken(): ?string
+    private function getToken(): string
     {
-        if ($this->clientId === '' || $this->clientSecret === '') {
-            throw new RuntimeException(
-                'FFLogs credentials are missing. Set FFLOGS_CLIENT_ID and FFLOGS_CLIENT_SECRET in your .env file.',
-            );
+        $cred = $this->credentials->current();
+        if ($cred === null) {
+            throw new FFLogsCredentialsMissing();
         }
 
-        return Cache::remember('fflogs_token', 3000, function () {
-            $response = Http::asForm()->post($this->tokenUrl, [
-                'client_id' => $this->clientId,
-                'client_secret' => $this->clientSecret,
+        $cacheKey = 'fflogs_token_' . hash('sha256', $cred['id'] . "\0" . $cred['secret']);
+        $token = Cache::get($cacheKey);
+        if (is_string($token) && $token !== '') {
+            return $token;
+        }
+
+        $token = $this->requestToken($cred['id'], $cred['secret']);
+        if ($token === null) {
+            throw new FFLogsCredentialsInvalid($cred['source']);
+        }
+
+        try {
+            Cache::put($cacheKey, $token, self::TOKEN_TTL);
+        } catch (\Throwable $e) {
+            Log::warning('FFLogs token cache write failed: ' . $e->getMessage());
+        }
+
+        return $token;
+    }
+
+    /**
+     * 設定画面で入力されたキーが使えるか確かめる（トークンを 1 回取得してみる）。
+     *
+     * @throws FFLogsRequestFailed FFLogs に接続できなかった（キーの良し悪しは判定できない）
+     */
+    public function verifyCredentials(string $clientId, string $clientSecret): bool
+    {
+        return $this->requestToken($clientId, $clientSecret) !== null;
+    }
+
+    /**
+     * client_credentials でトークンを取得する。キーが通らなければ null。
+     *
+     * @throws FFLogsRequestFailed FFLogs に接続できなかった
+     */
+    private function requestToken(string $clientId, string $clientSecret): ?string
+    {
+        try {
+            $response = Http::asForm()->timeout(15)->post($this->tokenUrl, [
+                'client_id' => $clientId,
+                'client_secret' => $clientSecret,
                 'grant_type' => 'client_credentials',
             ]);
+        } catch (ConnectionException $e) {
+            throw new FFLogsRequestFailed('FFLogs に接続できませんでした。時間をおいて再度お試しください。');
+        }
 
-            return $response->json()['access_token'];
-        });
+        $token = $response->successful() ? ($response->json('access_token') ?? null) : null;
+
+        return is_string($token) && $token !== '' ? $token : null;
     }
 
     /**
@@ -127,6 +177,8 @@ class FFLogsService
                         $map[$gid] = $ability['icon'];
                     }
                 }
+            } catch (FFLogsCredentialsProblem $e) {
+                throw $e;
             } catch (\Throwable $e) {
                 $failed = true;
                 Log::error('FFLogs gameData icon fetch failed: ' . $e->getMessage());

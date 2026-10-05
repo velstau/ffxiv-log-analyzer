@@ -705,7 +705,8 @@
                     const key = q.toString();
                     if (rangeCache.has(key)) return rangeCache.get(key);
                     const r = await fetch(RANGE_URL + '?' + key, { headers: { 'Accept': 'application/json' } });
-                    const j = r.ok ? await r.json() : { error: 'HTTP ' + r.status };
+                    // 401 は API キーの問題（サーバーが説明文を JSON で返す）。それ以外の失敗は状態コードを出す
+                    const j = r.ok ? await r.json() : await r.json().catch(() => ({})).then(e => ({ error: e.error || ('HTTP ' + r.status) }));
                     if (!j.error) rangeCache.set(key, j);
                     return j;
                 }

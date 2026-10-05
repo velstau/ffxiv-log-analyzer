@@ -12,6 +12,8 @@
     <div class="w-full max-w-lg p-8 bg-gray-800 rounded-lg shadow-xl">
         <h1 class="text-3xl font-bold mb-6 text-center text-indigo-400">FFLogs Timeline Viewer</h1>
 
+        @include('fflogs._api_key_status')
+
         @if (session('error'))
             <div class="bg-red-500 text-white p-3 rounded mb-4">
                 {{ session('error') }}

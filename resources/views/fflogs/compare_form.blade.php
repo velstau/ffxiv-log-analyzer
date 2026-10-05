@@ -13,6 +13,8 @@
         <h1 class="text-2xl font-bold mb-2 text-center text-indigo-400">パーティ A/B 火力・ローテ比較</h1>
         <p class="text-center text-gray-400 mb-6" style="font-size:1rem;">同じボスの2ログを、フェーズ別・分別に比較します。</p>
 
+        @include('fflogs._api_key_status')
+
         @if (session('error'))
             <div class="bg-red-500 text-white p-3 rounded mb-4" style="font-size:1rem;">
                 {{ session('error') }}

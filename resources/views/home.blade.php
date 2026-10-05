@@ -12,6 +12,7 @@
     <div class="w-full max-w-3xl px-6">
         <h1 class="text-3xl font-bold text-center text-indigo-400">FFLogs ツール</h1>
         <p class="text-center text-gray-400 mt-2 mb-8" style="font-size:1rem;">FFLogs のログを読み解くための道具箱です。</p>
+        @include('fflogs._api_key_status')
 
         <div class="space-y-4">
             <a href="{{ route('mitigation.form') }}"

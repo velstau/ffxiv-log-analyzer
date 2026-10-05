@@ -36,10 +36,24 @@ cp .env.example .env
 php artisan key:generate
 ```
 
-FFLogs API のクライアントを https://www.fflogs.com/api/clients/ で作成し、
-発行された Client ID / Secret を `.env` に書く。
+### FFLogs API キー
+
+**利用者が自分のキーを設定する。** 画面の「API キーを設定する」（`/api-key`）で、FFLogs の
+https://www.fflogs.com/api/clients/ で作成した Client ID / Client Secret を入力する。
+
+- 保存前に FFLogs でアクセストークンを取得してみて、通ったキーだけを受け付ける
+- キーは**利用者のブラウザの Cookie** に置く（Laravel の EncryptCookies で暗号化・HttpOnly・このアプリのパス限定）。
+  既定はブラウザを閉じるまで、「このブラウザに 30 日間保存する」を選んだときだけ 30 日。**サーバーには保存しない**
+- アクセストークンはキーごとに別のキャッシュ（キャッシュ名はキーのハッシュ）に最大 50 分置く
+- キーが無い・通らないときは、解析などの実行時に設定画面へ案内する（AJAX には 401 の JSON）
+- 実装: `app/Support/FFLogsCredentialStore.php`（置き場所）、`app/Http/Controllers/ApiKeyController.php`（画面）、
+  `app/Http/Middleware/RequireFFLogsCredentials.php`（実行前の確認）、`bootstrap/app.php`（案内への変換）
+
+開発で `.env` のキーを使いたいときだけ、次のように書く。**公開環境では書かない**（運営者のキーを他人に使わせないため）。
+利用者が Cookie にキーを設定していれば、そちらが優先される。
 
 ```dotenv
+FFLOGS_ALLOW_SERVER_CREDENTIALS=true
 FFLOGS_CLIENT_ID=your-client-id
 FFLOGS_CLIENT_SECRET=your-client-secret
 ```
@@ -47,6 +61,7 @@ FFLOGS_CLIENT_SECRET=your-client-secret
 `.env` は `.gitignore` 済み。**認証情報をリポジトリにコミットしないこと。**
 値は `config/services.php` 経由で読むので、`php artisan config:cache` した状態でも動く
 （`env()` を直接呼ぶとキャッシュ後に null になる）。
+`php artisan fflogs:warm-pool` はリクエストが無い（Cookie が無い）ので、`.env` のキーを許可した環境でしか動かない。
 
 ```bash
 php artisan serve   # http://localhost:8000/

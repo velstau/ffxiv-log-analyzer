@@ -15,6 +15,9 @@ return [
     */
 
     'fflogs' => [
+        // 公開版では利用者が自分のキーを設定する（App\Support\FFLogsCredentialStore）。
+        // 下の .env のキーは allow_server_credentials が true のとき（開発用）だけ使う。本番では false にし、キーも置かない。
+        'allow_server_credentials' => (bool) env('FFLOGS_ALLOW_SERVER_CREDENTIALS', false),
         'client_id' => env('FFLOGS_CLIENT_ID'),
         'client_secret' => env('FFLOGS_CLIENT_SECRET'),
         'token_url' => env('FFLOGS_TOKEN_URL', 'https://ja.fflogs.com/oauth/token'),
