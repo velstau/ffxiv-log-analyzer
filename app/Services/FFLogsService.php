@@ -298,6 +298,8 @@ query($code: String!, $fightId: Int!) {
                 startTime
                 endTime
                 name
+                encounterID
+                difficulty
                 gameZone {
                     id
                     name

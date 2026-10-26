@@ -495,9 +495,49 @@ class MitigationSpec
         ];
     }
 
-    /** コンテンツ別のダメージ低下の低下率。fight名はローカライズで揺れるためゾーン名も併用して判定。 */
-    public static function damageDownRate(string $fightName, string $zoneName = ''): float
+    /**
+     * ダメージ低下の低下率が分かっているエンカウンター（FFLogs の encounterID => 低下率）。
+     *
+     * 低下率はサーバー側の値で、クライアントのデータ（XIVAPI）にも FFLogs のログにも入っておらず、
+     * 同じステータスIDでも戦闘ごとに値が違う。出典のある戦闘だけを載せ、残りは DD_REDUCTION で仮定する。
+     * 出典: エデン零式・絶バハムート = Allagan Studies「The Ups and Downs of Statuses」(2021, 実測)
+     *       https://www.akhmorning.com/news/the-ups-and-downs-of-statuses/
+     *       絶オメガ = https://ffxiv.consolegameswiki.com/wiki/Damage_Down
+     *       絶もうひとつの未来 = 非公式の攻略ガイド（https://ffxiv.tuufless.com/mana/fru/）。一次情報は未確認
+     */
+    private const DD_BY_ENCOUNTER = [
+        1039 => 0.50, 1047 => 0.50, 1060 => 0.50, 1073 => 0.50, // 絶バハムート（ハッチ・メガフレア塔）
+        1068 => 0.90, 1077 => 0.90, // 絶オメガ検証戦
+        1079 => 0.90, // 絶もうひとつの未来
+        1085 => 0.90, // 絶妖星乱舞
+    ];
+
+    /** 零式のときだけ当てはまる低下率（通常版は値が違いうる）。FFLogs の difficulty 101 = 零式 */
+    private const DD_BY_SAVAGE_ENCOUNTER = [
+        66 => 0.25, 69 => 0.20, 72 => 0.50, // E2s・E5s・E8s
+        73 => 0.39, 74 => 0.44, 75 => 0.46, 76 => 0.50, 77 => 0.50, // E9s〜E12s（前半・後半）
+    ];
+
+    /** ダメージ低下の低下率が出典で裏付けられているか（画面で「仮定」と出し分けるため） */
+    public static function damageDownRateKnown(string $fightName, string $zoneName = '', int $encounterId = 0, int $difficulty = 0): bool
     {
+        return isset(self::DD_BY_ENCOUNTER[$encounterId])
+            || ($difficulty === 101 && isset(self::DD_BY_SAVAGE_ENCOUNTER[$encounterId]))
+            || self::damageDownRate($fightName, $zoneName) !== self::DD_REDUCTION;
+    }
+
+    /**
+     * コンテンツ別のダメージ低下の低下率。エンカウンターIDで引き、ないときは fight 名とゾーン名で判定する
+     * （名前はローカライズで揺れるのでゾーン名も併用）。
+     */
+    public static function damageDownRate(string $fightName, string $zoneName = '', int $encounterId = 0, int $difficulty = 0): float
+    {
+        if (isset(self::DD_BY_ENCOUNTER[$encounterId])) {
+            return self::DD_BY_ENCOUNTER[$encounterId];
+        }
+        if ($difficulty === 101 && isset(self::DD_BY_SAVAGE_ENCOUNTER[$encounterId])) {
+            return self::DD_BY_SAVAGE_ENCOUNTER[$encounterId];
+        }
         // 絶妖星乱舞（Dancing Mad）：-90%
         if (preg_match('/Dancing Mad|妖星乱舞/u', $fightName)) {
             return 0.90;

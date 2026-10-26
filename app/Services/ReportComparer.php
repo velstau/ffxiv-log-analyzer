@@ -383,7 +383,9 @@ class ReportComparer
         $overall['enemies'] = $this->summarizeEnemyTable($this->fflogs->getEnemyDamageTable($code, $fightId, $st, $et))['enemies'];
 
         // このコンテンツのダメージ低下の低下率（想定ダメージ算出用。絶妖星乱舞=-90%等）
-        $ddr = MitigationSpec::damageDownRate($fight['name'] ?? '', $fight['gameZone']['name'] ?? '');
+        $ddArgs = [$fight['name'] ?? '', $fight['gameZone']['name'] ?? '', (int) ($fight['encounterID'] ?? 0), (int) ($fight['difficulty'] ?? 0)];
+        $ddr = MitigationSpec::damageDownRate(...$ddArgs);
+        $ddKnown = MitigationSpec::damageDownRateKnown(...$ddArgs);
 
         // 与ダメ生イベント（フェーズ内rDPS推移グラフ・範囲指定集計用）。時刻順ソート済み想定だが念のため。
         $dmgEvents = $this->fflogs->getDamageDoneEvents($code, $fightId, $st, $et);
@@ -405,6 +407,7 @@ class ReportComparer
                 true,
                 $code,
                 $fightId,
+                $ddKnown,
             );
             // このフェーズのクローズドポジション付与先と稼働率
             $phaseDur = max(1, $ph['end'] - $ph['start']);
@@ -687,7 +690,7 @@ class ReportComparer
         }
 
         // 与ダメ低下系デバフの稼働区間：プレイヤー名 => kind('dd'|'weak25'|'weak50') => [[start,end],...]
-        // dd = ダメージ低下（ギミック失敗デバフ。IDが戦闘ごとに違うため名前で判定。低下率は MitigationSpec::DD_REDUCTION で仮定）
+        // dd = ダメージ低下（ギミック失敗デバフ。IDが戦闘ごとに違うため名前で判定。低下率は MitigationSpec::damageDownRate()）
         // weak25 = 衰弱(43, -25%) / weak50 = 頽廃(44, -50%)（死亡復帰ペナルティ・低下率はゲーム仕様で固定）
         $dmgDebuffSegs = [];
         $ddIconByPlayer = []; // プレイヤー名 => ダメージ低下の実アイコン（ビュー表示用）
@@ -704,7 +707,8 @@ class ReportComparer
                 $kind = 'weak50';
             } else {
                 $abName = $abilities->get($rawId)['name'] ?? ($abilities->get($sid)['name'] ?? '');
-                if (!preg_match('/ダメージ低下|Damage Down/iu', $abName)) {
+                // 名前は完全一致で見る。部分一致だと予告マーカー「指定：与ダメージ低下」(692) も数えてしまう
+                if (!preg_match('/\A(ダメージ低下|Damage Down)\z/iu', trim($abName))) {
                     continue;
                 }
                 $kind = 'dd';
@@ -777,6 +781,7 @@ class ReportComparer
         bool $withPotionGain,
         $code = null,
         $fightId = null,
+        bool $ddKnown = false,
     ): float {
         $potionByPlayer = $ctx['potionByPlayer'];
         $potionIconByPlayer = $ctx['potionIconByPlayer'];
@@ -846,6 +851,8 @@ class ReportComparer
             $pp['potentialRdps'] = ($pp['total'] > 0 && $lossTotal > 0)
                 ? $pp['rdps'] * (1 + $lossTotal / $pp['total'])
                 : $pp['rdps'];
+            $pp['ddRate'] = $ddr; // 画面で「-10% と仮定」などと出すため
+            $pp['ddKnown'] = $ddKnown;
             $pp['lossDeathDps'] = $lossDeath / $combatSec;
             $pp['lossWeakDps'] = $lossWeak / $combatSec;
             $pp['lossDdDps'] = $lossDd / $combatSec;
@@ -980,9 +987,11 @@ class ReportComparer
         }
         $summary = $this->summarizeDamageTable($table, $start, $end);
 
-        $ddr = MitigationSpec::damageDownRate($fight['name'] ?? '', $fight['gameZone']['name'] ?? '');
+        $ddArgs = [$fight['name'] ?? '', $fight['gameZone']['name'] ?? '', (int) ($fight['encounterID'] ?? 0), (int) ($fight['difficulty'] ?? 0)];
+        $ddr = MitigationSpec::damageDownRate(...$ddArgs);
+        $ddKnown = MitigationSpec::damageDownRateKnown(...$ddArgs);
         // 薬の上乗せ推定は薬使用者ぶん追加問い合わせが走るので、任意範囲の再集計では省く
-        $this->enrichPlayerLosses($summary, $start, $end, $et, $ctx, $ddr, false);
+        $this->enrichPlayerLosses($summary, $start, $end, $et, $ctx, $ddr, false, null, null, $ddKnown);
 
         $summary['partyPotentialRdps'] = array_sum(array_map(
             fn($p) => $p['potentialRdps'] ?? $p['rdps'],
