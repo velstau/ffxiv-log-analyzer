@@ -11,7 +11,7 @@
 .logs-app .job-btn img{flex-shrink:0}
 .logs-app .job-btn span{margin-left:0}
 .timeline-app{--logs-number-font:var(--tblr-font-sans-serif);--tblr-font-monospace:var(--logs-number-font);font-variant-numeric:tabular-nums lining-nums;height:100vh;height:100dvh;overflow:hidden;display:flex;flex-direction:column;margin:0}
-.timeline-toolbar{flex:none;background:var(--tblr-bg-surface);z-index:5}
+.timeline-toolbar{flex:none;background:var(--tblr-bg-surface);position:relative;z-index:70}/* 凡例の説明が表の固定見出し（z-index 66）より上に出るように */
 .analysis-topline{display:flex;align-items:center;flex-wrap:wrap;gap:.375rem 1rem;padding:.375rem .75rem}
 .analysis-summary{display:flex;align-items:baseline;flex-wrap:wrap;gap:.25rem .5rem;flex:1 1 18rem;min-width:0}.analysis-summary h1{font-size:1.25rem;line-height:1.3;overflow-wrap:anywhere}.analysis-summary .badge{align-self:center}
 .analysis-home:hover{color:var(--tblr-body-color)!important}.analysis-notice{flex-basis:100%}
@@ -20,7 +20,8 @@
 .analysis-actions .btn{min-height:36px;padding:.25rem .5rem;white-space:nowrap}
 .analysis-tabline{display:flex;align-items:center;flex-wrap:wrap;gap:.25rem 1rem;padding:0 .5rem}
 .analysis-tabline .nav-link{padding:.4rem .625rem}
-.timeline-state-key{display:flex;flex-wrap:wrap;gap:.25rem .75rem}.timeline-state-key span{white-space:nowrap}
+.timeline-state-key{display:flex;flex-wrap:wrap;align-items:center;gap:.25rem .75rem}.timeline-state-key>span{white-space:nowrap;cursor:help}
+.timeline-legend-help{width:min(32rem,calc(100vw - 2rem));max-height:min(70vh,40rem);overflow:auto;padding:.75rem 1rem;white-space:normal}.timeline-legend-help dt{display:flex;align-items:center;font-weight:600;color:var(--tblr-body-color)}.timeline-legend-help dd{margin:0 0 .5rem 1.75rem}.timeline-legend-help i{display:inline-block;width:1.5rem;height:1.5rem;flex-shrink:0}
 .timeline-state-key i{display:inline-block;vertical-align:middle;width:1.5rem;height:1.5rem}
 .timeline-view{flex:1;min-width:0;min-height:0;overflow:auto;overscroll-behavior:contain;position:relative}
 .timeline-app #mitigation-table{table-layout:fixed;border-spacing:0;border-collapse:separate;font-size:1rem}

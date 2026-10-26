@@ -37,6 +37,31 @@
             @php $totalDeaths = array_sum(array_map(fn($g) => $g['victim_count'], $deaths)); @endphp
             <button type="button" id="tab-btn-death" onclick="switchView('death')" class="nav-link" role="tab" aria-selected="false" aria-controls="view-death">💀 デスチェッカー @if ($totalDeaths)<span class="text-red ms-1">({{ $totalDeaths }})</span>@endif</button>
         </div>
-        <div class="timeline-state-key text-secondary" role="note" aria-label="チェック表示の凡例" title="チェックはログの解析結果を示し、この画面では編集しません。">@foreach (['used' => '使用した瞬間', 'on' => '軽減適用・効果中', 'cd' => 'リキャスト中', 'x' => 'バリア破壊', 'off' => '未使用'] as $state => $label)<span><i class="mit mit-{{ $state }}" aria-hidden="true"></i>{{ $label }}</span>@endforeach</div>
+        @php
+            // 表の各セル（1行＝1回の攻撃 × 1スキル）の見た目の意味。凡例と「説明」の一覧で共用する。
+            $stateLegend = [
+                'used' => ['使用・この攻撃に適用', 'このスキルを使った時刻にいちばん近い攻撃の行。その攻撃の被弾者に効果が載っていた。'],
+                'used-miss' => ['使用・この攻撃には未適用', '使った時刻にいちばん近い攻撃の行だが、その攻撃には効果が載っていない。攻撃の後に使ったか、被弾者が効果の対象外だった。'],
+                'on' => ['軽減適用・効果中', '効果時間中の攻撃。被弾者に効果が載っていた攻撃のほか、効果時間内でも被弾者が対象外だった攻撃も同じ表示になる。'],
+                'cd' => ['リキャスト中', '効果が切れてから再使用できるようになるまで。帯が途切れた行から再び使える。'],
+                'x' => ['バリア破壊', 'この攻撃を吸収してバリアが割れた。'],
+                'off' => ['未使用', '効果もリキャストも無い。'],
+            ];
+        @endphp
+        <div class="timeline-state-key text-secondary" role="note" aria-label="チェック表示の凡例">
+            @foreach ($stateLegend as $state => [$label, $desc])<span title="{{ $desc }}"><i class="mit mit-{{ $state }}" aria-hidden="true"></i>{{ $label }}</span>@endforeach
+            <div class="dropdown">
+                <button type="button" class="btn btn-sm btn-ghost-secondary" data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-expanded="false">説明</button>
+                <div class="dropdown-menu dropdown-menu-end timeline-legend-help">
+                    <p class="text-secondary mb-2">表の各マスは「その行の攻撃 × そのスキル」の状態です。ログから読み取った結果を表示しているだけなので、クリックしても切り替わりません。</p>
+                    <dl class="m-0">
+                        @foreach ($stateLegend as $state => [$label, $desc])
+                            <dt><i class="mit mit-{{ $state }}" aria-hidden="true"></i>{{ $label }}</dt>
+                            <dd class="text-secondary">{{ $desc }}</dd>
+                        @endforeach
+                    </dl>
+                </div>
+            </div>
+        </div>
     </div>
 </header>

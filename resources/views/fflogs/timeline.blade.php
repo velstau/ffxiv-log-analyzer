@@ -210,8 +210,9 @@
                                 $isUp = !$isActive && ($cellData['up'] ?? false);
                                 $onCd = !$isActive && !$isUp && ($cellData['cooldown'] ?? false);
                                 // 優先順位：使用マーカー > 被弾軽減(チェック) > 効果中 > リキャスト中 > 未使用
+                                // 使用マーカーは最も近い行に付くため、使用前の被弾や対象外の被弾にも付く。効果が載っていない行は枠だけにする。
                                 $mitClass = $isUsed
-                                    ? 'mit-used'
+                                    ? ($isActive ? 'mit-used' : 'mit-used-miss')
                                     : ($isActive
                                         ? ($broken ? 'mit-x' : 'mit-on')
                                         : ($isUp ? 'mit-up' : ($onCd ? 'mit-cd' : 'mit-off')));
@@ -220,7 +221,8 @@
                                 $cellTitle = $skillName;
                                 if ($isUsed) {
                                     $cellTitle .= ' 使用 ' . gmdate('i:s', (int)($cellData['used_time'] ?? 0))
-                                        . (($cellData['used_src'] ?? '') ? '（' . $cellData['used_src'] . '）' : '');
+                                        . (($cellData['used_src'] ?? '') ? '（' . $cellData['used_src'] . '）' : '')
+                                        . ($isActive ? '' : ((($cellData['used_time'] ?? 0) > ($event['rel_time'] ?? 0)) ? '・この被弾の後に使用' : '・この被弾には効果なし'));
                                 } elseif ($isActive) {
                                     $cellTitle .= ' 発動中' . ($sourceText ? '：' . $sourceText : '');
                                 } elseif ($isUp) {

@@ -206,6 +206,12 @@ tbody tr {
     box-shadow: none;
 }
 
+/* 使用したがこの被弾には効果が載っていない（使用前の被弾・対象外）：緑の枠だけ */
+.mit-used-miss::before {
+    background: transparent;
+    border: 2px solid var(--tblr-green, #2fb344);
+}
+
 /* バリア破壊：塗りつぶしの箱（赤） */
 .mit-x::before {
     background: #dc2626;
