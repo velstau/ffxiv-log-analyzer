@@ -37,6 +37,18 @@
                     style="font-size:1rem;">
             </div>
             <p class="text-base text-secondary" style="font-size:1rem;">※ それぞれ <code>?fight=◯</code> 付きのURLを貼ってください。比較は同じボス同士が前提です。</p>
+            <label class="form-check" style="font-size:1rem;">
+                <input class="form-check-input" type="checkbox" name="hide_names" value="1" id="hide_names">
+                <span class="form-check-label">プレイヤー名を表示しない（「PT:AのSCH」のように表示。共有URLにも実名を残しません）</span>
+            </label>
+            <script>
+                // 前回の選択を覚えておく（このブラウザだけ）
+                (function () {
+                    const box = document.getElementById('hide_names');
+                    try { box.checked = localStorage.getItem('compare.hideNames') === '1'; } catch (e) {}
+                    box.addEventListener('change', () => { try { localStorage.setItem('compare.hideNames', box.checked ? '1' : '0'); } catch (e) {} });
+                })();
+            </script>
 
             <button type="submit"
                 class="btn btn-primary legacy-w-full legacy-py-2 legacy-px-4 bg-primary  rounded fw-semibold text-white  " style="font-size:1.05rem;">

@@ -134,9 +134,24 @@
     @include('_tool_nav')
     <div class="container-xl py-4 compare-scroll">
 
-        <div class="legacy-flex legacy-items-center legacy-justify-between legacy-mb-4">
-            <h1 class="fs-1 fw-bold text-primary">A/B 比較：{{ $A['name'] }}</h1>
-            <a href="{{ route('compare.form') }}" class="text-secondary  text-decoration-underline">← 別のログを比較</a>
+        <div class="legacy-flex legacy-items-center legacy-justify-between legacy-flex-wrap legacy-gap-2 legacy-mb-4">
+            <div class="legacy-flex legacy-items-center legacy-flex-wrap legacy-gap-2">
+                <h1 class="fs-1 fw-bold text-primary m-0">A/B 比較：{{ $A['name'] }}</h1>
+                @if ($hideNames ?? false)
+                    <span class="badge bg-purple-lt">プレイヤー名を非表示</span>
+                @endif
+                @if ($isShared ?? false)
+                    <span class="badge bg-blue-lt" title="有効期限：{{ $shareExpiresAt }}">共有結果（APIキー不要）</span>
+                @elseif ($cachedResult ?? false)
+                    <span class="badge bg-secondary-lt" title="比較結果は2時間一時保存されます。再読み込みではAPIを呼び出しません。">結果を一時保存中（2時間）</span>
+                @endif
+            </div>
+            <div class="legacy-flex legacy-items-center legacy-flex-wrap legacy-gap-2">
+                @if (($shareDraft ?? false) || ($isShared ?? false))
+                    <button type="button" class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#timeline-share">{{ ($isShared ?? false) ? '共有URL・管理' : 'URLで共有' }}</button>
+                @endif
+                <a href="{{ route('compare.form') }}" class="btn">別のログを比較</a>
+            </div>
         </div>
 
         {{-- ヘッダ：A vs B 概要 --}}
@@ -293,8 +308,8 @@
                         $bSer = $bP['series'] ?? [];
                         // 範囲指定の個人別rDPS再集計API（/compare/range）に渡す識別子と、フェーズ開始の絶対時刻
                         $tsSrc = [
-                            'a' => $aP ? ['code' => $A['code'], 'fight' => $A['fightId'], 'start' => $aP['startMs'], 'end' => $aP['endMs']] : null,
-                            'b' => $bP ? ['code' => $B['code'], 'fight' => $B['fightId'], 'start' => $bP['startMs'], 'end' => $bP['endMs']] : null,
+                            'a' => $aP ? ['code' => $A['code'] ?? null, 'fight' => $A['fightId'] ?? null, 'start' => $aP['startMs'], 'end' => $aP['endMs']] : null,
+                            'b' => $bP ? ['code' => $B['code'] ?? null, 'fight' => $B['fightId'] ?? null, 'start' => $bP['startMs'], 'end' => $bP['endMs']] : null,
                         ];
                     @endphp
                     @if (count($aSer) > 1 || count($bSer) > 1)
@@ -402,6 +417,9 @@
 
             const BW = 10;                                   // グラフのバケット幅（秒）＝サーバ側 SERIES_BUCKET_SEC と揃える
             const RANGE_URL = @json(route('compare.range')); // 選択範囲の個人別rDPS再集計API
+            // 共有結果にはレポート番号がなく、閲覧者のAPIキーもないので、個人別の再集計は行わない（パーティ計と被攻撃は出す）
+            const CAN_REFETCH = @json(!($isShared ?? false));
+            const HIDE_NAMES = @json((bool) ($hideNames ?? false));
             const fmtT = s => Math.floor(s / 60) + ':' + String(Math.round(s % 60)).padStart(2, '0');
             const nf = n => Math.round(n).toLocaleString();
             const esc = t => String(t).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
@@ -688,7 +706,7 @@
                         }
                     }
                     out.push(provisional
-                        ? '<span class="ts-prov">概算・FFLogsで再集計中…</span>'
+                        ? '<span class="ts-prov">' + (CAN_REFETCH ? '概算・FFLogsで再集計中…' : '概算') + '</span>'
                         : '<span class="ts-conf">FFLogs基準</span>');
                     return out.join(' ');
                 }
@@ -696,6 +714,7 @@
                 /** 選択範囲をA/Bまとめて1リクエストで集計する（同じ範囲は使い回して問い合わせを増やさない） */
                 async function fetchRange(win) {
                     const q = new URLSearchParams();
+                    if (HIDE_NAMES) q.set('anon', '1'); // フェーズカードと同じ別名で返してもらう
                     Object.keys(win).forEach(k => {
                         const s = SRC[k];
                         q.set(k + '[code]', s.code);
@@ -719,6 +738,10 @@
                     const seq = ++reqSeq;
                     const box = panel.querySelector('.ts-detail');
                     if (!box) return;
+                    if (!CAN_REFETCH) {
+                        box.innerHTML = '<span class="text-secondary text-base">共有結果では、範囲の個人別rDPSは再集計できません（パーティ計は概算値です）。</span>';
+                        return;
+                    }
                     box.innerHTML = '<span class="text-secondary text-base">FFLogsで再集計中…</span>';
 
                     // A/Bでフェーズ長が違うと、片方だけ選択範囲がフェーズ末尾をはみ出す。
@@ -787,6 +810,14 @@
     </script>
 
     <div class="legacy-flex legacy-justify-center legacy-pb-8">@include('_copyright')</div>
+@if (($shareDraft ?? false) || ($isShared ?? false))
+    @include('fflogs._timeline_share', [
+        'shareTitle' => 'DPS比較の結果をURLで共有',
+        'shareNotice' => ($hideNames ?? false)
+            ? 'プレイヤー名は「PT:AのSCH」のような表記で保存され、実名は共有されません。FFLogsのレポート番号も共有されません。'
+            : 'URLを知っている人は、プレイヤー名を含む比較結果を閲覧できます。FFLogsのレポート番号とAPIキーは共有されません。',
+    ])
+@endif
 </body>
 
 </html>

@@ -17,11 +17,17 @@ class TimelineShareController extends Controller
         return $request->session()->get('timeline_share_owner');
     }
 
+    /** 軽減・バリアの結果と DPS 比較の結果は、同じ下書き・共有の仕組みに種別を付けて載せている */
+    private static function viewOf(array $stored): string
+    {
+        return TimelineShareStore::kindOf($stored) === 'compare' ? 'fflogs.compare' : 'fflogs.timeline';
+    }
+
     public function result(Request $request, string $id, TimelineShareStore $shares)
     {
         $draft = $shares->findDraft($id, (string) $request->session()->get('timeline_share_owner', ''));
         $response = $draft
-            ? response()->view('fflogs.timeline', $draft['data'] + ['shareDraft' => $id, 'cachedResult' => true])
+            ? response()->view(self::viewOf($draft), $draft['data'] + ['shareDraft' => $id, 'cachedResult' => true])
             : response()->view('fflogs.share-unavailable', ['temporaryResult' => true], 410);
         return $response->withHeaders(['Cache-Control' => 'private, no-store', 'X-Robots-Tag' => 'noindex, nofollow, noarchive', 'Referrer-Policy' => 'no-referrer']);
     }
@@ -46,7 +52,7 @@ class TimelineShareController extends Controller
     {
         $snapshot = $shares->find($id);
         $response = $snapshot
-            ? response()->view('fflogs.timeline', $snapshot['data'] + ['isShared' => true, 'shareId' => $id, 'shareExpiresAt' => $snapshot['expires_at'], 'canDeleteShare' => $shares->ownedBy($snapshot, (string) $request->session()->get('timeline_share_owner', ''))])
+            ? response()->view(self::viewOf($snapshot), $snapshot['data'] + ['isShared' => true, 'shareId' => $id, 'shareExpiresAt' => $snapshot['expires_at'], 'canDeleteShare' => $shares->ownedBy($snapshot, (string) $request->session()->get('timeline_share_owner', ''))])
             : response()->view('fflogs.share-unavailable', [], 404);
         return $response->withHeaders(['Cache-Control' => 'private, no-store', 'X-Robots-Tag' => 'noindex, nofollow, noarchive', 'Referrer-Policy' => 'no-referrer']);
     }

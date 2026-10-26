@@ -78,6 +78,14 @@ class FFLogsController extends Controller
         if (!$A || !$B) {
             return back()->with('error', 'ファイトが見つからない、またはアクセスできませんでした。');
         }
+        // 名前を伏せるときは、下書き（＝共有の元）に実名を残さないよう、ここで置き換える。
+        // アドバイス文も別名で作られるよう buildPhaseAdvice より前に行う
+        $hideNames = $request->boolean('hide_names');
+        if ($hideNames) {
+            $A = $this->comparer->anonymize($A, $A['roster'], 'A');
+            $B = $this->comparer->anonymize($B, $B['roster'], 'B');
+        }
+        unset($A['roster'], $B['roster']);
 
         // フェーズID和集合（A/Bを揃えて並べる）
         $phaseIds = collect(array_merge(array_column($A['phases'], 'id'), array_column($B['phases'], 'id')))
@@ -94,7 +102,15 @@ class FFLogsController extends Controller
             );
         }
 
-        return view('fflogs.compare', compact('A', 'B', 'phaseIds', 'advice'));
+        $data = compact('A', 'B', 'phaseIds', 'advice', 'hideNames');
+        try {
+            $draft = app(TimelineShareStore::class)->draft($data, TimelineShareController::owner($request), 'compare');
+            // Post/Redirect/Get: 再読み込みで FFLogs への問い合わせを繰り返さない（軽減・バリアの結果と同じ）
+            return redirect()->route('timeline-results.show', $draft, 303)->header('Cache-Control', 'private, no-store');
+        } catch (\RuntimeException $e) {
+            \Illuminate\Support\Facades\Log::warning('Compare sharing preparation failed.');
+        }
+        return response()->view('fflogs.compare', $data)->header('Cache-Control', 'private, no-store');
     }
 
     /**
@@ -105,6 +121,7 @@ class FFLogsController extends Controller
      * 復元できないため、DamageDoneテーブルを窓ごとに引き直している。
      *
      * パラメータは a[code],a[fight],a[start],a[end] / b[...]（絶対ms）。片側だけでもよい。
+     * anon=1 のときは、フェーズカードと同じ別名（PT:AのSCH など）で返す。
      */
     public function rangeStats(Request $request)
     {
@@ -133,7 +150,9 @@ class FFLogsController extends Controller
             if ($sum === null) {
                 return response()->json(['error' => ($k === 'a' ? 'A' : 'B') . '側のデータを取得できませんでした。'], 502);
             }
-            $out[$k] = $sum;
+            $out[$k] = $request->boolean('anon')
+                ? $this->comparer->anonymize($sum, $this->comparer->roster($sd['code'], $sd['fightId']), strtoupper($k))
+                : $sum;
         }
         $out['advice'] = $this->comparer->buildPhaseAdvice($out['a'] ?? null, $out['b'] ?? null);
 

@@ -55,7 +55,16 @@ Illuminate\Support\Facades\Route::middleware('web')->get('/__ui/timeline', funct
     $data['shareDraft'] = app(App\Services\TimelineShareStore::class)->draft($data, App\Http\Controllers\TimelineShareController::owner($request));
     return redirect()->route('timeline-results.show', $data['shareDraft']);
 });
-Illuminate\Support\Facades\Route::middleware('web')->get('/__ui/compare', fn() => view('fflogs.compare', Tests\Fixtures\UiData::compare()));
+Illuminate\Support\Facades\Route::middleware('web')->get('/__ui/compare', function (Illuminate\Http\Request $request) {
+    $data = Tests\Fixtures\UiData::compare();
+    if ($data['hideNames'] = request('hide') === '1') {
+        foreach (['A', 'B'] as $side) {
+            $data[$side] = app(App\Services\ReportComparer::class)->anonymize($data[$side], [], $side);
+        }
+    }
+    $draft = app(App\Services\TimelineShareStore::class)->draft($data, App\Http\Controllers\TimelineShareController::owner($request), 'compare');
+    return redirect()->route('timeline-results.show', $draft);
+});
 
 // Exercise the same base path as the nginx deployment, including assets/cookies.
 $_SERVER['SCRIPT_NAME'] = $prefix . '/index.php';

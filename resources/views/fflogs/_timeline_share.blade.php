@@ -1,10 +1,10 @@
 <div class="modal fade" id="timeline-share" tabindex="-1" aria-labelledby="timeline-share-title" aria-hidden="true"
     data-share-endpoint="{{ route('timeline-shares.store') }}" data-share-draft="{{ $shareDraft ?? '' }}">
     <div class="modal-dialog modal-dialog-centered"><div class="modal-content">
-        <div class="modal-header"><h2 class="modal-title" id="timeline-share-title">軽減・バリア結果をURLで共有</h2><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="閉じる"></button></div>
+        <div class="modal-header"><h2 class="modal-title" id="timeline-share-title">{{ $shareTitle ?? '軽減・バリア結果をURLで共有' }}</h2><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="閉じる"></button></div>
         <div class="modal-body">
             <p>相手のAPIキーは不要です。共有時点の解析結果を表示します。</p>
-            <div class="alert alert-info">URLを知っている人は、プレイヤー名・シナジー・死因などの詳細も閲覧できます。APIキーは共有されません。</div>
+            <div class="alert alert-info">{{ $shareNotice ?? 'URLを知っている人は、プレイヤー名・シナジー・死因などの詳細も閲覧できます。APIキーは共有されません。' }}</div>
             @csrf
             <p>有効期間：作成から30日。1つのブラウザで有効な共有は{{ \App\Services\TimelineShareStore::MAX_PER_OWNER }}件まで。作成したブラウザで共有URLを開くと、共有を停止できます（ブラウザのセッションが有効な間）。</p>
             <div id="timeline-share-error" class="alert alert-danger" role="alert" hidden></div>

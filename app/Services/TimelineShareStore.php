@@ -19,12 +19,16 @@ class TimelineShareStore
     public const MAX_PER_OWNER = 10;
     public const MAX_TOTAL = 500;
     private const META = 'timeline-shares/meta/';
-    private const KEYS = ['fight', 'events', 'playerColumns', 'mitigationColumns', 'mitigationGroups', 'mitigationGroupIcons', 'playerDetails', 'playerTimelines', 'start_time', 'synergyWindows', 'deaths', 'hasPhases'];
+    /** 種別ごとに保存する項目。種別のない古い共有は timeline（軽減・バリア）とみなす */
+    private const KEYS = [
+        'timeline' => ['fight', 'events', 'playerColumns', 'mitigationColumns', 'mitigationGroups', 'mitigationGroupIcons', 'playerDetails', 'playerTimelines', 'start_time', 'synergyWindows', 'deaths', 'hasPhases'],
+        'compare' => ['A', 'B', 'phaseIds', 'advice', 'hideNames'],
+    ];
 
-    public function draft(array $data, string $owner): string
+    public function draft(array $data, string $owner, string $kind = 'timeline'): string
     {
         $id = Str::random(48);
-        if (!Cache::put('timeline-draft:' . $id, ['owner' => hash('sha256', $owner), 'data' => Arr::only($data, self::KEYS)], now()->addHours(2))) {
+        if (!Cache::put('timeline-draft:' . $id, ['owner' => hash('sha256', $owner), 'kind' => $kind, 'data' => Arr::only($data, self::KEYS[$kind])], now()->addHours(2))) {
             throw new RuntimeException('Could not prepare timeline sharing.');
         }
         return $id;
@@ -64,7 +68,8 @@ class TimelineShareStore
             }
         }
         $id = Str::random(48);
-        $snapshot = ['version' => 1, 'owner' => $data['owner'], 'created_at' => now()->toIso8601String(), 'expires_at' => now()->addDays(self::DAYS)->toIso8601String(), 'data' => $data['data']];
+        $kind = self::kindOf($data);
+        $snapshot = ['version' => 1, 'kind' => $kind, 'owner' => $data['owner'], 'created_at' => now()->toIso8601String(), 'expires_at' => now()->addDays(self::DAYS)->toIso8601String(), 'data' => $kind === 'compare' ? self::withoutReportCodes($data['data']) : $data['data']];
         $encrypted = Crypt::encryptString(json_encode($snapshot, JSON_THROW_ON_ERROR));
         if (!Storage::disk('local')->put('timeline-shares/' . $id . '.enc', $encrypted)) {
             throw new RuntimeException('Could not save shared timeline.');
@@ -132,6 +137,26 @@ class TimelineShareStore
         } catch (DecryptException|JsonException $e) {
             return null;
         }
+    }
+
+    /** 下書き・共有の種別（timeline / compare） */
+    public static function kindOf(array $stored): string
+    {
+        return ($stored['kind'] ?? 'timeline') === 'compare' ? 'compare' : 'timeline';
+    }
+
+    /**
+     * 共有にはレポート番号を残さない（軽減の共有と同じ扱い。名前を伏せてもレポートを開けば分かってしまう）。
+     * 番号は範囲指定の再集計にだけ使うもので、共有画面ではその再集計を出さない。
+     */
+    private static function withoutReportCodes(array $data): array
+    {
+        foreach (['A', 'B'] as $side) {
+            if (isset($data[$side]) && is_array($data[$side])) {
+                unset($data[$side]['code'], $data[$side]['fightId']);
+            }
+        }
+        return $data;
     }
 
     public function ownedBy(array $snapshot, string $owner): bool

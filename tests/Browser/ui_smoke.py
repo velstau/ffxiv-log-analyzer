@@ -118,6 +118,22 @@ with sync_playwright() as pw:
     page.mouse.up()
     expect(page.locator('.ts-panel').first).to_contain_text('Fixture range result')
     assert requests and '/ff14tools/logs2timeline/compare/range?' in requests[0]
+    assert 'anon=1' not in requests[0]
+    expect(page.get_by_role('button', name='URLで共有')).to_be_visible()
+
+    # Hidden names: the page and the range request both use aliases.
+    visit('/__ui/compare?hide=1')
+    assert 'Fixture Player with a long name' not in page.content()
+    expect(page.locator('body')).to_contain_text('PT:Aの')
+    cv = page.locator('canvas.phase-ts').first
+    cv.scroll_into_view_if_needed()
+    geometry = cv.evaluate('(e)=>{const c=Chart.getChart(e),r=e.getBoundingClientRect();return {x:r.x+c.scales.x.getPixelForValue(10),x2:r.x+c.scales.x.getPixelForValue(35),y:r.y+c.chartArea.top+15}}')
+    page.mouse.move(geometry['x'], geometry['y'])
+    page.mouse.down()
+    page.mouse.move(geometry['x2'], geometry['y'], steps=15)
+    page.mouse.up()
+    expect(page.locator('.ts-panel').first).to_contain_text('Fixture range result')
+    assert 'anon=1' in requests[-1]
     assert not errors, errors
     print(json.dumps({'result': 'PASS', 'viewports': [1440, 390, 320], 'range_requests': len(requests), 'browser_errors': errors, 'artifacts': str(OUT)}, ensure_ascii=False))
     browser.close()

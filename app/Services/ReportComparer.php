@@ -213,7 +213,7 @@ class ReportComparer
                 continue;
             }
             $laggards[] = [
-                'job' => $lp['job'], 'name' => $lp['name'], 'delta' => $delta, 'approx' => $p['role'],
+                'job' => $lp['job'], 'name' => $lp['name'], 'anon' => !empty($lp['anon']), 'delta' => $delta, 'approx' => $p['role'],
                 'lowActive' => (float) ($lp['activePct'] ?? 0), 'hiActive' => (float) ($hp['activePct'] ?? 0),
                 'lowPotion' => !empty($lp['potion']), 'hiPotion' => !empty($hp['potion']),
                 'lowDeaths' => (int) ($lp['deathsHarm'] ?? 0), 'hiDeaths' => (int) ($hp['deathsHarm'] ?? 0),
@@ -249,7 +249,7 @@ class ReportComparer
             if ($lg['delta'] < 200) {
                 continue;
             } // 200 rDPS未満の差は指摘しない（誤差）
-            $line = "{$lg['job']}（{$lg['name']}）が相手より -{$fmt($lg['delta'])} rDPS";
+            $line = ($lg['anon'] ? $lg['name'] : "{$lg['job']}（{$lg['name']}）") . "が相手より -{$fmt($lg['delta'])} rDPS";
             $reasons = [];
             // 死亡・与ダメ低下デバフを優先して指摘（稼働率低下の「原因」であることが多い）
             if ($lg['lowDeaths'] > $lg['hiDeaths']) {
@@ -512,6 +512,12 @@ class ReportComparer
             ];
         }
 
+        // 範囲指定の再集計でも同じ別名を付けられるよう、参加者の表を残しておく
+        $roster = $this->rosterOf($fight, $master);
+        if ($roster) {
+            Cache::put("fflogs:roster:{$code}:{$fightId}", $roster, 1800);
+        }
+
         return [
             'label' => $label,
             'code' => $code,
@@ -522,7 +528,91 @@ class ReportComparer
             'hasPhases' => count($phases) > 1,
             'overall' => $overall,
             'phases' => $phaseSummaries,
+            'roster' => $roster,
         ];
+    }
+
+    /** ファイト参加者の 実名 => ジョブ略称（範囲指定の再集計用。buildCompareSide が作った表があればそれを使う） */
+    public function roster(string $code, int $fightId): array
+    {
+        $roster = Cache::get("fflogs:roster:{$code}:{$fightId}");
+        if (is_array($roster)) {
+            return $roster;
+        }
+        $fight = Cache::remember("fflogs:fight:{$code}:{$fightId}", 1800, fn() => $this->fflogs->getFightDetails($code, $fightId));
+        $roster = $fight ? $this->rosterOf($fight, $this->fflogs->getMasterData($code)) : [];
+        if ($roster) {
+            Cache::put("fflogs:roster:{$code}:{$fightId}", $roster, 1800);
+        }
+        return $roster;
+    }
+
+    private function rosterOf(array $fight, ?array $master): array
+    {
+        $ids = array_flip($fight['friendlyPlayers'] ?? []);
+        $roster = [];
+        foreach ($master['actors'] ?? [] as $actor) {
+            if (($actor['type'] ?? '') === 'Player' && isset($ids[$actor['id'] ?? -1], $actor['name'])) {
+                $roster[$actor['name']] = TimelineJobMeta::of($actor['subType'] ?? '')['abbr'];
+            }
+        }
+        return $roster;
+    }
+
+    /**
+     * プレイヤーの実名を「PT:AのSCH」のような別名に置き換える（名前を伏せて比較・共有するため）。
+     *
+     * 同じジョブが複数いるときの番号は実名順で決める。フェーズや範囲ごとに rDPS 順で振ると、
+     * 同じ人の別名が場所によって変わるため。実名はプレイヤー一覧のほか、クローズドポジションの
+     * 付与先などにも入るので、項目を列挙せず、配列全体で実名と完全に一致する文字列を置き換える。
+     */
+    public function anonymize(array $data, array $roster, string $label): array
+    {
+        // 参加者の表にない名前（表の取得に失敗したときなど）も、一覧に出る人は伏せる
+        $collect = function ($v) use (&$collect, &$roster) {
+            if (!is_array($v)) {
+                return;
+            }
+            if (isset($v['name'], $v['job'], $v['rdps']) && is_string($v['name'])) {
+                $roster += [$v['name'] => (string) $v['job']];
+            }
+            foreach ($v as $item) {
+                $collect($item);
+            }
+        };
+        $collect($data);
+
+        ksort($roster, SORT_STRING);
+        $byJob = [];
+        foreach ($roster as $name => $job) {
+            $byJob[$job][] = (string) $name;
+        }
+        $alias = [];
+        foreach ($byJob as $job => $names) {
+            foreach ($names as $i => $name) {
+                $alias[$name] = "PT:{$label}の{$job}" . (count($names) > 1 ? '(' . ($i + 1) . ')' : '');
+            }
+        }
+
+        $replace = function ($v) use (&$replace, $alias) {
+            if (is_string($v)) {
+                return $alias[$v] ?? $v;
+            }
+            if (!is_array($v)) {
+                return $v;
+            }
+            $out = [];
+            foreach ($v as $k => $item) {
+                $renamed = is_string($item) && isset($alias[$item]);
+                $item = $replace($item);
+                $out[is_string($k) ? ($alias[$k] ?? $k) : $k] = $item;
+                if ($k === 'name' && $renamed) {
+                    $out['anon'] = true; // アドバイス文で「SCH（PT:AのSCH）」と重ねないための印
+                }
+            }
+            return $out;
+        };
+        return $replace($data);
     }
 
     /**
