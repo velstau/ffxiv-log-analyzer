@@ -190,10 +190,14 @@ class MitigationSpecTest extends TestCase
         // 名前ではなくエンカウンターIDで引く（日本語/英語の表記揺れに左右されない）
         $this->assertSame(0.90, MitigationSpec::damageDownRate('', '', 1068));
         $this->assertSame(0.50, MitigationSpec::damageDownRate('', '', 1060));
+        $this->assertSame(0.50, MitigationSpec::damageDownRate('', '', 100)); // M8S
+        $this->assertSame(0.50, MitigationSpec::damageDownRate('', '', 1065)); // 絶竜詩
         $this->assertTrue(MitigationSpec::damageDownRateKnown('', '', 1068));
+        // 零式と通常版は区別せず零式の値（エデン零式 E9s）
+        $this->assertSame(0.39, MitigationSpec::damageDownRate('', '', 73));
         // 表にないエンカウンターは既定値で「仮定」扱い
-        $this->assertSame(MitigationSpec::DD_REDUCTION, MitigationSpec::damageDownRate('', '', 73));
-        $this->assertFalse(MitigationSpec::damageDownRateKnown('', '', 73));
+        $this->assertSame(MitigationSpec::DD_REDUCTION, MitigationSpec::damageDownRate('', '', 4500));
+        $this->assertFalse(MitigationSpec::damageDownRateKnown('', '', 4500));
         // 名前で判定する既存の分も「出典あり」として扱う
         $this->assertTrue(MitigationSpec::damageDownRateKnown('Dancing Mad'));
     }
