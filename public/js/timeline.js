@@ -593,10 +593,25 @@ function ddMitChain(base, mits) {
     const rows = [];
     for (const s of sorted) {
         const saved = running * s.m;
-        rows.push(Object.assign({}, s, { saved: saved }));
+        rows.push(Object.assign({}, s, { before: running, saved: saved }));
         running -= saved;
     }
     return { rows: rows, theoretical: running };
+}
+
+// 1回の使用で別々の軽減ステータスが重なって付くスキル（原初の血気＋原初の血潮など）は、
+// 被弾者に付いていたステータスの分だけ乗算する。parts が無ければ表の軽減率を使う。
+// parts があるのにどれも付いていなければ軽減は0（原初の血煙のバリアだけが残っている等）。
+// 被弾者のバフ情報が無いイベントでは判定できないので、表の軽減率を使う。
+function ddSkillRate(e, base, buffs) {
+    const all = Object.entries(e.parts || {});
+    const parts = all.filter(([id]) => buffs.includes(Number(id))).map(([, p]) => Number(p));
+    if (parts.length === 0) return { m: (all.length && buffs.length) ? 0 : base / 100, parts: [] };
+    return { m: 1 - parts.reduce((r, p) => r * (1 - p / 100), 1), parts: parts };
+}
+
+function ddPct(m) {
+    return `${+(m * 100).toFixed(1)}%`;
 }
 
 // 同名スキルが複数人ぶん立っていたことを示すバッジ。FFXIVでは同名効果は重複しないので、
@@ -685,6 +700,7 @@ function openDamageDetail(actionName, actionTime) {
             isBarrier: (kind === 'barrier' || !!meta.has_barrier),
             mitPhys: Number(meta.mit_phys) || 0,
             mitMagic: Number(meta.mit_magic) || 0,
+            parts: meta.parts || {},
             sources: (col.sources && col.sources.length) ? col.sources.slice() : [],
             broken: !!col.is_broken,
             targets: targets,
@@ -737,8 +753,9 @@ function openDamageDetail(actionName, actionTime) {
     const mitRate = raw > 0 ? (cutByMit / raw) : 0;                    // 軽減率合計（実測）
 
     // 物理／魔法で軽減率が違うスキルがあるため、実測に近い方の解釈を採用する
-    const chainPhys = ddMitChain(raw, mitSkills.filter(e => e.mitPhys > 0).map(e => ({ e: e, m: e.mitPhys / 100 })));
-    const chainMagic = ddMitChain(raw, mitSkills.filter(e => e.mitMagic > 0).map(e => ({ e: e, m: e.mitMagic / 100 })));
+    const repBuffs = rep ? rep.buffs : [];
+    const chainPhys = ddMitChain(raw, mitSkills.filter(e => e.mitPhys > 0).map(e => Object.assign({ e: e }, ddSkillRate(e, e.mitPhys, repBuffs))).filter(r => r.m > 0));
+    const chainMagic = ddMitChain(raw, mitSkills.filter(e => e.mitMagic > 0).map(e => Object.assign({ e: e }, ddSkillRate(e, e.mitMagic, repBuffs))).filter(r => r.m > 0));
     let chain, dmgType;
     if (Math.abs(chainPhys.theoretical - mitigated) < Math.abs(chainMagic.theoretical - mitigated)) {
         chain = chainPhys; dmgType = '物理';
@@ -775,7 +792,7 @@ function openDamageDetail(actionName, actionTime) {
             <div class="legacy-flex-1 legacy-min-w-[8rem] rounded border border-green bg-green-lt legacy-p-2">
                 <div class="text-base text-secondary">軽減（合計 ${(mitRate * 100).toFixed(1)}%）</div>
                 <div class="fs-2 font-monospace text-green">${ddNum(cutByMit)}</div>
-                <div class="text-base text-green">軽減スキル ${mitSkills.length}種</div>
+                <div class="text-base text-green">軽減スキル ${chain.rows.length}種</div>
             </div>
             <div class="legacy-flex legacy-items-center text-secondary fs-2 legacy-px-1">−</div>
             <div class="legacy-flex-1 legacy-min-w-[8rem] rounded border border-cyan bg-cyan-lt legacy-p-2">
@@ -848,8 +865,9 @@ function openDamageDetail(actionName, actionTime) {
                         ${ddStackBadge(e)}
                         <span class="text-secondary text-base legacy-ml-1">${ddEscape(e.group)}</span></td>
                     <td class="legacy-p-2">${srcHtml}</td>
-                    <td class="legacy-p-2 text-end font-monospace text-green">${Math.round(row.m * 100)}%</td>
-                    <td class="legacy-p-2 text-end font-monospace text-green">${ddNum(row.saved)}</td>
+                    <td class="legacy-p-2 text-end font-monospace text-green">${ddPct(row.m)}${row.parts.length > 1 ? `<div class="text-secondary text-nowrap" title="1回の使用で付く複数の軽減が重なっている">${row.parts.join('%と')}%の重ね掛け</div>` : ''}</td>
+                    <td class="legacy-p-2 text-end font-monospace text-green">${ddNum(row.saved)}
+                        <div class="text-secondary text-nowrap" title="この時点で残っているダメージ × このスキルの軽減率">残り ${ddNum(row.before)} × ${ddPct(row.m)}</div></td>
                     <td class="legacy-p-2 text-base">${tgtHtml}</td>
                 </tr>`;
         }
@@ -874,6 +892,18 @@ function openDamageDetail(actionName, actionTime) {
                 <td class="legacy-p-2 text-base text-secondary">${ddNum(raw)} → ${ddNum(mitigated)}</td>
             </tr>
         </tbody></table>`;
+
+    // 10%＋10% が 20% ではなく 19% になる理由を、実際の軽減率で式にして見せる
+    const pcts = chain.rows.flatMap(r => r.parts.length > 1 ? r.parts : [+(r.m * 100).toFixed(1)]);
+    if (pcts.length >= 2 && raw > 0) {
+        const remain = chain.theoretical / raw;
+        html += `<div class="legacy-mt-2 rounded border border-secondary bg-body legacy-p-2 text-base">
+            <div>軽減は足し算ではなく<strong class="text-body">掛け算</strong>で重なります（ゲームの仕様）。1つ目で減った後の残りに、次の軽減率が掛かります。</div>
+            <div class="font-monospace text-body legacy-mt-1">1 − ${pcts.map(m => `(1 − ${m}%)`).join(' × ')} = 1 − ${(remain * 100).toFixed(1)}% = 軽減 ${((1 - remain) * 100).toFixed(1)}%
+                <span class="text-secondary">（単純な足し算なら ${+pcts.reduce((a, b) => a + b, 0).toFixed(1)}%／実測 ${(mitRate * 100).toFixed(1)}%）</span></div>
+            <div class="text-secondary legacy-mt-1">例：10%と10%なら、100が1つ目で90になり、2つ目は残り90の10%＝9だけ減らすので、合計は19%です。</div>
+        </div>`;
+    }
 
     if (mitOffTarget.length) {
         html += `<div class="legacy-mt-2 text-base text-secondary">

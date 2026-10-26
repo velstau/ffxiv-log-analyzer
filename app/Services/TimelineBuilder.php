@@ -809,9 +809,9 @@ class TimelineBuilder
                         if (in_array($abId, [44, 36923])) {
                             $duration = 15000;
                         } // ダムネーション / ヴェンジェンス
-                        if (in_array($abId, [16464])) {
+                        if (in_array($abId, [25751, 16464])) {
                             $duration = 8000;
-                        } // 原初の猛り
+                        } // 原初の血気 / 原初の猛り
                         if (in_array($abId, [40])) {
                             $duration = 10000;
                         } // スリル・オブ・バトル
@@ -857,7 +857,7 @@ class TimelineBuilder
                         if (in_array($abId, [199, 4241])) {
                             $duration = 10000;
                         } // タンクLB
-                        if (in_array($abId, [7535, 22198])) {
+                        if (in_array($abId, [7535])) {
                             $duration = 15000;
                         } // リプライザル
                         if (in_array($abId, [7531])) {
@@ -1470,7 +1470,7 @@ class TimelineBuilder
             }
 
             // Map Action IDs to Status IDs
-            if ($abId == 7535 || $abId == 22198) {
+            if ($abId == 7535) {
                 $abId = 1193;
             } // Reprisal Action -> Status
             if ($abId == 7549) {
@@ -1718,6 +1718,7 @@ class TimelineBuilder
                 $col['mit_phys'] = (int) ($power['mit_phys'] ?? $mitBase);
                 $col['mit_magic'] = (int) ($power['mit_magic'] ?? $mitBase);
                 $col['has_barrier'] = ($col['kind'] === 'barrier') || !empty($power['barrier']);
+                $col['parts'] = $power['parts'] ?? [];
 
                 // 解決優先順位：
                 // 1) レポートmasterDataのアクションアイコン（実使用時の正確なアイコン）

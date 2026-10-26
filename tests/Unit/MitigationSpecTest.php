@@ -101,6 +101,46 @@ class MitigationSpecTest extends TestCase
     }
 
     #[Test]
+    public function skill_parts_point_to_statuses_of_the_same_column(): void
+    {
+        // parts は「被弾者に付いていたステータスID => 軽減率」。列の ids に無いIDを書くと、
+        // そのステータスでは列が点灯しないので、内訳でも掛けられない。
+        $idsByName = [];
+        foreach (MitigationSpec::columns() as $skills) {
+            foreach ($skills as $name => $spec) {
+                $idsByName[$name] = array_merge($idsByName[$name] ?? [], $spec['ids']);
+            }
+        }
+
+        foreach (MitigationSpec::power() as $name => $spec) {
+            foreach ($spec['parts'] ?? [] as $statusId => $mit) {
+                $this->assertContains($statusId, $idsByName[$name] ?? [], "{$name} の parts {$statusId} が列の ids に無い");
+                $this->assertGreaterThan(0, $mit, "{$name} の parts {$statusId} の軽減率が0以下");
+                $this->assertLessThanOrEqual(100, $mit, "{$name} の parts {$statusId} の軽減率が100超");
+            }
+        }
+    }
+
+    #[Test]
+    public function status_ids_are_not_action_ids(): void
+    {
+        // ステータスIDとアクションIDは別の番号体系。ids にアクションIDを書くと、
+        // 同じ番号の無関係なステータス（ボスのデバフ等）で列が点灯する（2026-10 に 3 件あった）。
+        $actionIds = array_keys(MitigationSpec::cooldowns() + MitigationSpec::effectDurations() + MitigationSpec::barriers());
+        $mixed = [];
+
+        foreach (MitigationSpec::columns() as $job => $skills) {
+            foreach ($skills as $name => $spec) {
+                foreach (array_intersect($spec['ids'], $actionIds) as $id) {
+                    $mixed[] = "{$job} / {$name}: {$id}";
+                }
+            }
+        }
+
+        $this->assertSame([], $mixed, 'ステータスIDの欄に、アクションIDが入っている');
+    }
+
+    #[Test]
     public function synergies_declare_a_cooldown_and_a_duration(): void
     {
         foreach (MitigationSpec::synergies() as $job => $skills) {
