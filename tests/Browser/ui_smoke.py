@@ -124,7 +124,7 @@ with sync_playwright() as pw:
     # Hidden names: the page and the range request both use aliases.
     visit('/__ui/compare?hide=1')
     assert 'Fixture Player with a long name' not in page.content()
-    expect(page.locator('body')).to_contain_text('PT:Aの')
+    expect(page.locator('body')).to_contain_text('Paladin(A)')
     cv = page.locator('canvas.phase-ts').first
     cv.scroll_into_view_if_needed()
     geometry = cv.evaluate('(e)=>{const c=Chart.getChart(e),r=e.getBoundingClientRect();return {x:r.x+c.scales.x.getPixelForValue(10),x2:r.x+c.scales.x.getPixelForValue(35),y:r.y+c.chartArea.top+15}}')

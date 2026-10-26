@@ -118,7 +118,7 @@ DPS比較（`/compare`）も軽減・バリアと同じ仕組みに載せた。�
 - 比較の POST 成功後は 303 で `/results/{id}` に移動し、2時間は再読み込みで FFLogs API を呼ばない。
 - 共有には FFLogs のレポート番号（`A.code`・`B.code`・`fightId`）を残さない。そのため共有画面では、グラフの範囲選択で
   パーティ計の概算と被攻撃は出すが、個人別 rDPS の再集計（`/compare/range`。閲覧者の API キーが要る）は行わない。
-- フォームの「プレイヤー名を表示しない」を選ぶと、下書きに入れる前に実名を「PT:AのSCH」に置き換える（`ReportComparer::anonymize`）。
+- フォームの「プレイヤー名を表示しない」を選ぶと、下書きに入れる前に実名を「SCH(A)」に置き換える（`ReportComparer::anonymize`）。
   同じジョブが複数いるときは実名順に「(1)」「(2)」を付け、フェーズ・範囲で同じ人は同じ別名になる。
   範囲の再集計は `anon=1` で同じ別名を返す。参加者の表（実名 => ジョブ）は `fflogs:roster:{code}:{fightId}` に 30 分キャッシュする。
 - 関係するテスト: `tests/Feature/CompareShareTest.php`、`tests/Browser/ui_smoke.py`（`/__ui/compare?hide=1`）。

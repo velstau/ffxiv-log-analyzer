@@ -67,7 +67,7 @@ class CompareShareTest extends TestCase
         $this->fakeComparison();
         $response = $this->credentials()->post('/compare', ['url_a' => 'a', 'url_b' => 'b', 'hide_names' => '1'])->assertStatus(303);
         $resultUrl = $response->headers->get('Location');
-        $this->get($resultUrl)->assertOk()->assertSee('PT:AのPLD')->assertSee('PT:BのPLD')->assertSee('プレイヤー名を非表示')->assertDontSee(self::REAL_NAME);
+        $this->get($resultUrl)->assertOk()->assertSee('PLD(A)')->assertSee('PLD(B)')->assertSee('プレイヤー名を非表示')->assertDontSee(self::REAL_NAME);
 
         $this->postJson(route('timeline-shares.store'), ['draft' => basename($resultUrl)])->assertOk();
         $plaintext = Crypt::decryptString(Storage::disk('local')->get(Storage::disk('local')->files('timeline-shares')[0]));
@@ -84,14 +84,14 @@ class CompareShareTest extends TestCase
         // rDPS の並びが違っても、同じ人は同じ番号（番号は実名順）
         $phase1 = $comparer->anonymize(['players' => [$p('Zed Healer', 'SCH', 9000), $p('Amy Healer', 'SCH', 8000)]], $roster, 'A');
         $phase2 = $comparer->anonymize(['players' => [$p('Amy Healer', 'SCH', 9000), $p('Zed Healer', 'SCH', 8000)]], $roster, 'A');
-        $this->assertSame(['PT:AのSCH(2)', 'PT:AのSCH(1)'], array_column($phase1['players'], 'name'));
-        $this->assertSame(['PT:AのSCH(1)', 'PT:AのSCH(2)'], array_column($phase2['players'], 'name'));
+        $this->assertSame(['SCH(A2)', 'SCH(A1)'], array_column($phase1['players'], 'name'));
+        $this->assertSame(['SCH(A1)', 'SCH(A2)'], array_column($phase2['players'], 'name'));
 
         // 一覧以外（クローズドポジションの付与先）も置き換え、表にない人も伏せる
         $other = $comparer->anonymize(['closedPos' => [['name' => 'Tank One', 'src' => 'Amy Healer', 'pct' => 90]], 'players' => [$p('Newcomer', 'WHM', 1)]], $roster, 'B');
-        $this->assertSame('PT:BのPLD', $other['closedPos'][0]['name']);
-        $this->assertSame('PT:BのSCH(1)', $other['closedPos'][0]['src']);
-        $this->assertSame('PT:BのWHM', $other['players'][0]['name']);
+        $this->assertSame('PLD(B)', $other['closedPos'][0]['name']);
+        $this->assertSame('SCH(B1)', $other['closedPos'][0]['src']);
+        $this->assertSame('WHM(B)', $other['players'][0]['name']);
         $this->assertStringNotContainsString('Tank One', json_encode($other));
     }
 
@@ -103,7 +103,7 @@ class CompareShareTest extends TestCase
         $a = $comparer->anonymize($side(10000), ['Real Name' => 'SCH'], 'A');
         $b = $comparer->anonymize($side(20000), ['Real Name' => 'SCH'], 'B');
         $tips = implode("\n", $comparer->buildPhaseAdvice($a, $b)['tips']);
-        $this->assertStringContainsString('PT:AのSCHが相手より', $tips);
+        $this->assertStringContainsString('SCH(A)が相手より', $tips);
         $this->assertStringNotContainsString('Real Name', $tips);
     }
 
@@ -128,7 +128,7 @@ class CompareShareTest extends TestCase
         });
         $query = ['a' => ['code' => 'FixtureA', 'fight' => 1, 'start' => 0, 'end' => 5000]];
         $this->credentials()->withCredentials()->getJson('/compare/range?' . http_build_query($query + ['anon' => 1]))
-            ->assertOk()->assertJsonPath('a.players.0.name', 'PT:AのPLD')->assertDontSee(self::REAL_NAME);
+            ->assertOk()->assertJsonPath('a.players.0.name', 'PLD(A)')->assertDontSee(self::REAL_NAME);
         $this->credentials()->withCredentials()->getJson('/compare/range?' . http_build_query($query))
             ->assertOk()->assertJsonPath('a.players.0.name', self::REAL_NAME);
     }

@@ -121,7 +121,7 @@ class FFLogsController extends Controller
      * 復元できないため、DamageDoneテーブルを窓ごとに引き直している。
      *
      * パラメータは a[code],a[fight],a[start],a[end] / b[...]（絶対ms）。片側だけでもよい。
-     * anon=1 のときは、フェーズカードと同じ別名（PT:AのSCH など）で返す。
+     * anon=1 のときは、フェーズカードと同じ別名（SCH(A) など）で返す。
      */
     public function rangeStats(Request $request)
     {

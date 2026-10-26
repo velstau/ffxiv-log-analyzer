@@ -881,7 +881,7 @@
     @include('fflogs._timeline_share', [
         'shareTitle' => 'DPS比較の結果をURLで共有',
         'shareNotice' => ($hideNames ?? false)
-            ? 'プレイヤー名は「PT:AのSCH」のような表記で保存され、実名は共有されません。FFLogsのレポート番号も共有されません。'
+            ? 'プレイヤー名は「SCH(A)」のような表記で保存され、実名は共有されません。FFLogsのレポート番号も共有されません。'
             : 'URLを知っている人は、プレイヤー名を含む比較結果を閲覧できます。FFLogsのレポート番号とAPIキーは共有されません。',
     ])
 @endif

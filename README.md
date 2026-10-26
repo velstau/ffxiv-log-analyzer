@@ -3,7 +3,7 @@
 FFLogs のログを読み解くための Web ツール集。FFLogs API v2（GraphQL）から戦闘ログを取得し、
 サイトのUIでは出せない切り口で集計・可視化する。
 
-- PHP 8.2 / Laravel 12 / Blade（ビルド不要のインラインJS + Chart.js）
+- PHP 8.4 / Laravel 12 / Blade（ビルド不要のインラインJS + Chart.js）
 - FFLogs API v2（client credentials / GraphQL）
 - コーディング規約: PER Coding Style (PER-CS) / 静的検査は Laravel Pint
 - ビルド工程なし（npm 不要）。フロントはローカル配置のTabler 1.7.1（Bootstrap同梱）と既存JavaScript / Chart.js。ダークモードを基本とする

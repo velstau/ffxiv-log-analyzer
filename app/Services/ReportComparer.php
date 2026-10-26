@@ -574,7 +574,7 @@ class ReportComparer
     }
 
     /**
-     * プレイヤーの実名を「PT:AのSCH」のような別名に置き換える（名前を伏せて比較・共有するため）。
+     * プレイヤーの実名を「SCH(A)」のような別名（同じジョブが2人なら SCH(A1)・SCH(A2)）に置き換える（名前を伏せて比較・共有するため）。
      *
      * 同じジョブが複数いるときの番号は実名順で決める。フェーズや範囲ごとに rDPS 順で振ると、
      * 同じ人の別名が場所によって変わるため。実名はプレイヤー一覧のほか、クローズドポジションの
@@ -604,7 +604,7 @@ class ReportComparer
         $alias = [];
         foreach ($byJob as $job => $names) {
             foreach ($names as $i => $name) {
-                $alias[$name] = "PT:{$label}の{$job}" . (count($names) > 1 ? '(' . ($i + 1) . ')' : '');
+                $alias[$name] = "{$job}({$label}" . (count($names) > 1 ? (string) ($i + 1) : '') . ')';
             }
         }
 
@@ -621,7 +621,7 @@ class ReportComparer
                 $item = $replace($item);
                 $out[is_string($k) ? ($alias[$k] ?? $k) : $k] = $item;
                 if ($k === 'name' && $renamed) {
-                    $out['anon'] = true; // アドバイス文で「SCH（PT:AのSCH）」と重ねないための印
+                    $out['anon'] = true; // アドバイス文で「SCH（SCH(A)）」と重ねないための印
                 }
             }
             return $out;

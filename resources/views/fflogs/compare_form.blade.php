@@ -39,7 +39,7 @@
             <p class="text-base text-secondary" style="font-size:1rem;">※ それぞれ <code>?fight=◯</code> 付きのURLを貼ってください。比較は同じボス同士が前提です。</p>
             <label class="form-check" style="font-size:1rem;">
                 <input class="form-check-input" type="checkbox" name="hide_names" value="1" id="hide_names">
-                <span class="form-check-label">プレイヤー名を表示しない（「PT:AのSCH」のように表示。共有URLにも実名を残しません）</span>
+                <span class="form-check-label">プレイヤー名を表示しない（「SCH(A)」のように表示。共有URLにも実名を残しません）</span>
             </label>
             <script>
                 // 前回の選択を覚えておく（このブラウザだけ）
