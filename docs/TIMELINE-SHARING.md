@@ -1,4 +1,4 @@
-# 軽減・バリア結果のURL共有
+# 解析結果のURL共有（軽減・バリア／DPS比較）
 
 ## 利用手順
 
@@ -108,3 +108,17 @@ python3 tests/Browser/share_smoke.py http://172.24.0.2:8101/ff14tools/logs2timel
 - 全体の上限に達したときは、その場で期限切れを掃除してから数え直す（定期の掃除が止まっていても塞がらない）。
 - 索引を保存できなかったときは本体も消して503を返す（索引のない共有を残さない）。
 - 検証：PHP全64テスト/1,839 assertions、Pint全48ファイル、share_smoke。Codexのレビュー指摘2件を反映済み。
+
+## DPS比較の一時保存・共有・名前非表示（2026-10-27）
+
+DPS比較（`/compare`）も軽減・バリアと同じ仕組みに載せた。下書き・共有に種別 `kind`（`timeline` / `compare`）を持たせ、
+`/results/{id}`・`/shared/{id}` は種別で画面を切り替える。種別のない既存の共有は `timeline` とみなす（`version` は 1 のまま）。
+共有の上限（1 ブラウザ 10 件・全体 500 件）と有効期間 30 日は軽減と共通。
+
+- 比較の POST 成功後は 303 で `/results/{id}` に移動し、2時間は再読み込みで FFLogs API を呼ばない。
+- 共有には FFLogs のレポート番号（`A.code`・`B.code`・`fightId`）を残さない。そのため共有画面では、グラフの範囲選択で
+  パーティ計の概算と被攻撃は出すが、個人別 rDPS の再集計（`/compare/range`。閲覧者の API キーが要る）は行わない。
+- フォームの「プレイヤー名を表示しない」を選ぶと、下書きに入れる前に実名を「PT:AのSCH」に置き換える（`ReportComparer::anonymize`）。
+  同じジョブが複数いるときは実名順に「(1)」「(2)」を付け、フェーズ・範囲で同じ人は同じ別名になる。
+  範囲の再集計は `anon=1` で同じ別名を返す。参加者の表（実名 => ジョブ）は `fflogs:roster:{code}:{fightId}` に 30 分キャッシュする。
+- 関係するテスト: `tests/Feature/CompareShareTest.php`、`tests/Browser/ui_smoke.py`（`/__ui/compare?hide=1`）。
