@@ -86,3 +86,14 @@ python3 tests/Browser/share_smoke.py http://172.24.0.2:8101/ff14tools/logs2timel
 
 再読み込み対応の検証：PHP全58テスト/1,814 assertions、Pint全47ファイル、Chromeの1440/390/320px回帰検証成功。
 同一結果URLの連続再読み込み、他ブラウザの410、96pxのHit Dmgに(-100%)+Bが収まること、共有作成・停止を確認。
+
+## 外部由来の文字列のエスケープ（2026-10-26）
+
+共有URLで第三者が結果を開くため、FFLogs由来の技名・プレイヤー名・ジョブ・対象・アイコンのパスを、画面に出す前に必ずエスケープする。
+
+- `public/js/timeline.js`: innerHTMLに入れる値は `ddEscape()` を通す（属性値も含む）。判定・照合に使う値は元のまま。
+- Blade: onclickなどJSの引数は `'{{ $x }}'` で書かず `{{ \Illuminate\Support\Js::from($x) }}` で渡す。
+  `{{ }}` の `&#039;` は属性値の解釈で `'` に戻り、JSの文字列を抜けられる。`'` を含む名前ではクリックも効かなくなっていた。
+- 回帰テスト: `UiPageTest::timeline_onclick_arguments_cannot_break_out_of_js_strings`（修正前の版で失敗することを確認）。
+- 検証：PHP全59テスト/1,818 assertions、Pint全47ファイル、ui_smoke・share_smoke（1440/390/320px、JSエラーなし）。
+- 細工した名前をFFLogsのログに入れられるかは未確認。本番反映は未実施。

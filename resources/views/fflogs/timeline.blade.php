@@ -72,7 +72,7 @@
                     @foreach ($mitigationGroups as $groupName => $cols)
                         <th title="{{ $groupName }}" class="mitigation-group {{ count($cols) <= 2 ? 'mitigation-group-narrow' : '' }} legacy-p-1 border border-secondary bg-surface text-white fw-bold legacy-sticky legacy-top-0 legacy-z-[60] legacy-cursor-pointer  group"
                             style="top: 0; z-index: 60; background-color: var(--tblr-bg-surface-secondary);"
-                            colspan="{{ count($cols) }}" onclick="openJobTimeline('{{ $groupName }}')">
+                            colspan="{{ count($cols) }}" onclick="openJobTimeline({{ \Illuminate\Support\Js::from($groupName) }})">
                             <div class="mitigation-group-content">
                                 @if (isset($mitigationGroupIcons[$groupName]))
                                     <img src="{{ $mitigationGroupIcons[$groupName] }}" class="group-job-icon" loading="lazy">
@@ -123,7 +123,7 @@
                             {{ gmdate('i:s', $event['rel_time']) }}
                         </td>
                         <td class="c-action legacy-p-1 fw-bold text-white bg-body ability-name legacy-truncate legacy-w-48 legacy-max-w-[12rem] legacy-cursor-pointer   "
-                            onclick="openActionDetail('{{ $event['ability'] }}', {{ $event['timestamp'] }})">
+                            onclick="openActionDetail({{ \Illuminate\Support\Js::from($event['ability']) }}, {{ $event['timestamp'] }})">
                             {{ $event['ability'] }}
                         </td>
                         <td class="c-base legacy-p-1 text-end text-secondary font-monospace bg-body text-base legacy-w-16">
@@ -131,7 +131,7 @@
                         </td>
                         @php $hasHit = ($event['max_amount'] ?? 0) > 0; @endphp
                         <td class="c-hit legacy-p-1 text-end text-orange font-monospace fw-bold bg-body legacy-px-2 text-base legacy-w-16 sticky-divider shadow-sm {{ $hasHit ? 'legacy-cursor-pointer   ' : '' }}"
-                            @if ($hasHit) onclick="openDamageDetail('{{ addslashes($event['ability']) }}', {{ $event['timestamp'] }})" title="クリックで被弾内訳（軽減スキル・バリア・実被弾）を表示" @endif>
+                            @if ($hasHit) onclick="openDamageDetail({{ \Illuminate\Support\Js::from($event['ability']) }}, {{ $event['timestamp'] }})" title="クリックで被弾内訳（軽減スキル・バリア・実被弾）を表示" @endif>
                             <div class="hit-damage-amount">{{ number_format($event['max_amount'] ?? 0) }}</div>
                             @php
                                 $hitRate = $event['mitigation_rate'] ?? 0;

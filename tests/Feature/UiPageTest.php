@@ -35,6 +35,19 @@ class UiPageTest extends TestCase
     }
 
     #[Test]
+    public function timeline_onclick_arguments_cannot_break_out_of_js_strings(): void
+    {
+        // 共有URLで第三者も開く画面。技名の ' や <> で onclick の JS 文字列を抜けられないこと
+        $data = UiData::timeline();
+        $data['events'][0]['ability'] = "x'); alert(1); //<img src=x onerror=alert(2)>";
+        $this->view('fflogs.timeline', $data)
+            ->assertSee("openActionDetail('x\\u0027); alert(1); \\/\\/\\u003Cimg", false)
+            ->assertSee("openDamageDetail('x\\u0027); alert(1); \\/\\/\\u003Cimg", false)
+            ->assertDontSee("openActionDetail('x&#039;", false)
+            ->assertDontSee('<img src=x', false);
+    }
+
+    #[Test]
     public function comparison_result_keeps_phase_graph_and_range_controls(): void
     {
         $this->view('fflogs.compare', UiData::compare())->assertSee('UI fixture')

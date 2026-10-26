@@ -84,11 +84,11 @@ function openActionFilterModal() {
         const div = document.createElement('div');
         div.className = 'legacy-flex legacy-items-center legacy-space-x-2';
         div.innerHTML = `
-            <input type="checkbox" id="act_${action}" value="${action}" 
+            <input type="checkbox" id="act_${ddEscape(action)}" value="${ddEscape(action)}"
                 class="action-checkbox form-check-input bg-body-tertiary border-secondary text-blue rounded legacy-h-4 legacy-w-4"
                 ${!isHidden ? 'checked' : ''}>
-            <label for="act_${action}" class="text-base text-body legacy-truncate legacy-cursor-pointer legacy-select-none" title="${action}">
-                ${action}
+            <label for="act_${ddEscape(action)}" class="text-base text-body legacy-truncate legacy-cursor-pointer legacy-select-none" title="${ddEscape(action)}">
+                ${ddEscape(action)}
             </label>
         `;
         list.appendChild(div);
@@ -219,17 +219,17 @@ function openPlayerTimeline(playerName) {
     // Set Title with Icon if available
     let iconHtml = '';
     if (pDetail && pDetail.icon) {
-        iconHtml = `<img src="${pDetail.icon}" class="legacy-w-6 legacy-h-6 legacy-mr-2 legacy-inline-block rounded">`;
+        iconHtml = `<img src="${ddEscape(pDetail.icon)}" class="legacy-w-6 legacy-h-6 legacy-mr-2 legacy-inline-block rounded">`;
     }
     title.innerHTML =
-        `${playerName} <span class="text-base text-secondary fw-normal">(${pDetail.job || 'Unknown'})</span>`;
+        `${ddEscape(playerName)} <span class="text-base text-secondary fw-normal">(${ddEscape(pDetail.job || 'Unknown')})</span>`;
 
     // Build Content
     if (pDetail && pDetail.icon) {
-        iconHtml = `<img src="${pDetail.icon}" class="legacy-w-6 legacy-h-6 legacy-mr-2 legacy-inline-block rounded">`;
+        iconHtml = `<img src="${ddEscape(pDetail.icon)}" class="legacy-w-6 legacy-h-6 legacy-mr-2 legacy-inline-block rounded">`;
     }
     title.innerHTML =
-        `${pDetail.name} <span class="text-base text-secondary fw-normal">&nbsp;[${pDetail.job}]</span>`;
+        `${ddEscape(pDetail.name)} <span class="text-base text-secondary fw-normal">&nbsp;[${ddEscape(pDetail.job)}]</span>`;
 
     // Clear Body
     content.innerHTML = '';
@@ -260,25 +260,25 @@ function openPlayerTimeline(playerName) {
                 null;
 
             const iconHtml = iconUrl ?
-                `<img src="${iconUrl}" class="legacy-w-6 legacy-h-6 legacy-object-contain rounded border ${event.broken ? "border-red border-2" : "border-secondary"}" onerror="this.style.display='none'">` :
+                `<img src="${ddEscape(iconUrl)}" class="legacy-w-6 legacy-h-6 legacy-object-contain rounded border ${event.broken ? "border-red border-2" : "border-secondary"}" onerror="this.style.display='none'">` :
                 '<div class="legacy-w-6 legacy-h-6"></div>';
 
             // 対象（ターゲット）表示。自分自身への使用は「自分」、他者対象は名前を強調
             const targetHtml = event.target ?
                 (event.self_target ?
                     `<span class="text-secondary text-base">自分</span>` :
-                    `<span class="text-cyan fw-medium">${event.target}</span>`) :
+                    `<span class="text-cyan fw-medium">${ddEscape(event.target)}</span>`) :
                 `<span class="text-secondary">-</span>`;
 
             html += `
                 <tr class=" ">
                     <td class="legacy-p-2 text-end font-monospace text-secondary">${timeStr}</td>
                     <td class="legacy-p-2 text-start text-body text-base align-middle">
-                        ${event.enemy_action || "-"}
+                        ${ddEscape(event.enemy_action || "-")}
                     </td>
                     <td class="legacy-p-2 legacy-pl-4 align-middle legacy-flex legacy-items-center legacy-gap-2">
                         ${iconHtml}
-                        <span class="text-body fw-medium">${event.name}${event.broken ? " <span title='Barrier Broken' class='text-red text-base'>💔</span>" : ""}</span>
+                        <span class="text-body fw-medium">${ddEscape(event.name)}${event.broken ? " <span title='Barrier Broken' class='text-red text-base'>💔</span>" : ""}</span>
                     </td>
                     <td class="legacy-p-2 legacy-pl-4 align-middle">${targetHtml}</td>
                 </tr>
@@ -396,7 +396,7 @@ function openActionDetail(actionName, actionTime) {
             const meta = mitCols[colKey] || {};
             const displayName = meta.name || colKey;
             const skillIcon = meta.icon
-                ? `<img src="${ICON_BASE}/abilities/${meta.icon}" class="legacy-w-6 legacy-h-6 legacy-object-contain rounded border border-secondary legacy-inline-block legacy-mr-2 align-middle">`
+                ? `<img src="${ddEscape(`${ICON_BASE}/abilities/${meta.icon}`)}" class="legacy-w-6 legacy-h-6 legacy-object-contain rounded border border-secondary legacy-inline-block legacy-mr-2 align-middle">`
                 : '';
             const brokenTag = col.is_broken ? " <span title='バリア消滅' class='text-red text-base'>💔</span>" : "";
 
@@ -420,9 +420,9 @@ function openActionDetail(actionName, actionTime) {
             if (sources) {
                 srcHtml = sources.map(s => {
                     const pd = playerDetails[s] || {};
-                    const icon = pd.icon ? `<img src="${pd.icon}" class="legacy-w-5 legacy-h-5 legacy-inline-block rounded legacy-mr-1 align-middle">` : '';
-                    const job = pd.job ? `<span class="text-secondary text-base legacy-ml-1">${pd.job}</span>` : '';
-                    return `${icon}<span class="text-white fw-medium">${shortName(s)}</span>${job}`;
+                    const icon = pd.icon ? `<img src="${ddEscape(pd.icon)}" class="legacy-w-5 legacy-h-5 legacy-inline-block rounded legacy-mr-1 align-middle">` : '';
+                    const job = pd.job ? `<span class="text-secondary text-base legacy-ml-1">${ddEscape(pd.job)}</span>` : '';
+                    return `${icon}<span class="text-white fw-medium">${ddEscape(shortName(s))}</span>${job}`;
                 }).join('<span class="text-secondary legacy-mx-1">/</span>');
             } else {
                 srcHtml = `<span class="text-secondary text-base">（効果のみ検出）</span>`;
@@ -448,14 +448,14 @@ function openActionDetail(actionName, actionTime) {
                 // 対象を実名で列挙（バリア等が誰に入っていたか分かるように）
                 tgtHtml = targets.map(t => {
                     const pd = playerDetails[t] || {};
-                    const icon = pd.icon ? `<img src="${pd.icon}" class="legacy-w-5 legacy-h-5 legacy-inline-block rounded legacy-mr-1 align-middle">` : '';
-                    return `${icon}<span class="text-cyan">${shortName(t)}</span>`;
+                    const icon = pd.icon ? `<img src="${ddEscape(pd.icon)}" class="legacy-w-5 legacy-h-5 legacy-inline-block rounded legacy-mr-1 align-middle">` : '';
+                    return `${icon}<span class="text-cyan">${ddEscape(shortName(t))}</span>`;
                 }).join('<span class="text-secondary legacy-mx-1">/</span>');
             }
 
             html += `
                 <tr class="">
-                    <td class="legacy-p-2 legacy-flex legacy-items-center">${skillIcon}<span class="text-body">${displayName}${brokenTag}</span></td>
+                    <td class="legacy-p-2 legacy-flex legacy-items-center">${skillIcon}<span class="text-body">${ddEscape(displayName)}${brokenTag}</span></td>
                     <td class="legacy-p-2">${srcHtml}</td>
                     <td class="legacy-p-2">${tgtHtml}</td>
                     <td class="legacy-p-2 text-end">${remStr}</td>
@@ -752,7 +752,7 @@ function openDamageDetail(actionName, actionTime) {
 
     // ================= ① 最終結果（素→軽減→バリア→実被弾）=================
     const repIcon = rep && playerDetails[rep.name] && playerDetails[rep.name].icon
-        ? `<img src="${playerDetails[rep.name].icon}" class="legacy-w-5 legacy-h-5 legacy-inline-block rounded legacy-mr-1 align-middle">` : '';
+        ? `<img src="${ddEscape(playerDetails[rep.name].icon)}" class="legacy-w-5 legacy-h-5 legacy-inline-block rounded legacy-mr-1 align-middle">` : '';
     const repJob = rep && playerDetails[rep.name] ? (playerDetails[rep.name].job || '') : '';
 
     html += `
@@ -831,11 +831,11 @@ function openDamageDetail(actionName, actionTime) {
         for (const row of chain.rows) {
             const e = row.e;
             const icon = e.icon
-                ? `<img src="${ICON_BASE}/abilities/${e.icon}" class="legacy-w-6 legacy-h-6 legacy-object-contain rounded border border-secondary legacy-inline-block legacy-mr-2 align-middle">` : '';
+                ? `<img src="${ddEscape(`${ICON_BASE}/abilities/${e.icon}`)}" class="legacy-w-6 legacy-h-6 legacy-object-contain rounded border border-secondary legacy-inline-block legacy-mr-2 align-middle">` : '';
             const srcHtml = e.sources.length
                 ? e.sources.map(sv => {
                     const pd = playerDetails[sv] || {};
-                    const pi = pd.icon ? `<img src="${pd.icon}" class="legacy-w-5 legacy-h-5 legacy-inline-block rounded legacy-mr-1 align-middle">` : '';
+                    const pi = pd.icon ? `<img src="${ddEscape(pd.icon)}" class="legacy-w-5 legacy-h-5 legacy-inline-block rounded legacy-mr-1 align-middle">` : '';
                     return `${pi}<span class="text-white">${ddEscape(shortName(sv))}</span>`;
                 }).join('<span class="text-secondary legacy-mx-1">/</span>')
                 : '<span class="text-secondary text-base">（効果のみ検出）</span>';
@@ -908,11 +908,11 @@ function openDamageDetail(actionName, actionTime) {
     } else {
         for (const e of barrierSkills) {
             const icon = e.icon
-                ? `<img src="${ICON_BASE}/abilities/${e.icon}" class="legacy-w-6 legacy-h-6 legacy-object-contain rounded border border-secondary legacy-inline-block legacy-mr-2 align-middle">` : '';
+                ? `<img src="${ddEscape(`${ICON_BASE}/abilities/${e.icon}`)}" class="legacy-w-6 legacy-h-6 legacy-object-contain rounded border border-secondary legacy-inline-block legacy-mr-2 align-middle">` : '';
             const srcHtml = e.sources.length
                 ? e.sources.map(sv => {
                     const pd = playerDetails[sv] || {};
-                    const pi = pd.icon ? `<img src="${pd.icon}" class="legacy-w-5 legacy-h-5 legacy-inline-block rounded legacy-mr-1 align-middle">` : '';
+                    const pi = pd.icon ? `<img src="${ddEscape(pd.icon)}" class="legacy-w-5 legacy-h-5 legacy-inline-block rounded legacy-mr-1 align-middle">` : '';
                     return `${pi}<span class="text-white">${ddEscape(shortName(sv))}</span>`;
                 }).join('<span class="text-secondary legacy-mx-1">/</span>')
                 : '<span class="text-secondary text-base">（効果のみ検出）</span>';
@@ -958,7 +958,7 @@ function openDamageDetail(actionName, actionTime) {
             <tbody class=" ">`;
     for (const p of players) {
         const pd = playerDetails[p.name] || {};
-        const pi = pd.icon ? `<img src="${pd.icon}" class="legacy-w-5 legacy-h-5 legacy-inline-block rounded legacy-mr-1 align-middle">` : '';
+        const pi = pd.icon ? `<img src="${ddEscape(pd.icon)}" class="legacy-w-5 legacy-h-5 legacy-inline-block rounded legacy-mr-1 align-middle">` : '';
         const cut = p.raw - p.mitigated;
         const rate = p.raw > 0 ? (cut / p.raw * 100) : 0;
         html += `
