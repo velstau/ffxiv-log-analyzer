@@ -11,11 +11,11 @@
 @endphp
 @if ($enNames->isNotEmpty())
     <div class="en-block">
-        <div class="en-head text-xs text-gray-400 pb-1 mb-1 border-b border-gray-700">
+        <div class="en-head text-base text-secondary legacy-pb-1 legacy-mb-1 legacy-border-b border-secondary">
             <div>敵（ボス／雑魚）</div>
-            <div class="text-right text-blue-300">A 被ダメ</div>
-            <div class="text-gray-500" style="grid-column: span 2; text-align:center;">バー長＝そのフェーズで各敵に入った総ダメージ</div>
-            <div class="text-left text-rose-300">B 被ダメ</div>
+            <div class="text-end text-blue">A 被ダメ</div>
+            <div class="text-secondary" style="grid-column: span 2; text-align:center;">バー長＝そのフェーズで各敵に入った総ダメージ</div>
+            <div class="text-start text-red">B 被ダメ</div>
         </div>
         @foreach ($enNames as $nm)
             @php
@@ -26,11 +26,11 @@
                 $isBoss = in_array(($aEn[$nm]['type'] ?? $bEn[$nm]['type'] ?? ''), ['Boss', 'boss'], true);
             @endphp
             <div class="en-row">
-                <div class="en-name {{ $isBoss ? 'text-amber-200 font-bold' : 'text-gray-300' }}" title="{{ $nm }}">{{ $nm }}</div>
-                <div class="text-right font-mono text-xs {{ $av >= $bv ? 'text-blue-200' : 'text-gray-500' }}">{{ $av > 0 ? $fmtAmt($av) : '—' }}</div>
+                <div class="en-name {{ $isBoss ? 'text-yellow fw-bold' : 'text-body' }}" title="{{ $nm }}">{{ $nm }}</div>
+                <div class="text-end font-monospace text-base {{ $av >= $bv ? 'text-blue' : 'text-secondary' }}">{{ $av > 0 ? $fmtAmt($av) : '—' }}</div>
                 <div class="bwrap a"><div class="bar-h a" style="width: {{ $aw }}%"></div></div>
                 <div class="bwrap"><div class="bar-h b" style="width: {{ $bw }}%"></div></div>
-                <div class="text-left font-mono text-xs {{ $bv >= $av ? 'text-rose-200' : 'text-gray-500' }}">{{ $bv > 0 ? $fmtAmt($bv) : '—' }}</div>
+                <div class="text-start font-monospace text-base {{ $bv >= $av ? 'text-red' : 'text-secondary' }}">{{ $bv > 0 ? $fmtAmt($bv) : '—' }}</div>
             </div>
         @endforeach
     </div>

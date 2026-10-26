@@ -2,7 +2,10 @@
 const ICON_BASE = window.ICON_BASE || "/icons";
 
 function togglePlayers() {
-    document.body.classList.toggle("hide-players");
+    const hidden = document.body.classList.toggle("hide-players");
+    const button = document.getElementById('toggle-players');
+    if (button) { button.setAttribute('aria-pressed', String(!hidden)); button.classList.toggle('active', !hidden); }
+    window.dispatchEvent(new Event('timeline:layout'));
 }
 
 // ビュー切り替え（軽減・バリア ↔ シナジー・バフ ↔ デスチェッカー）
@@ -14,14 +17,11 @@ function switchView(name) {
         const active = (key === name);
         if (view) view.classList.toggle('hidden', !active);
         if (btn) {
-            btn.classList.toggle('bg-gray-700', active);
-            btn.classList.toggle('text-white', active);
-            btn.classList.toggle('border-gray-600', active);
-            btn.classList.toggle('bg-gray-900', !active);
-            btn.classList.toggle('text-gray-400', !active);
-            btn.classList.toggle('border-gray-700', !active);
+            btn.classList.toggle('active', active);
+            btn.setAttribute('aria-selected', String(active));
         }
     }
+    window.dispatchEvent(new Event('timeline:layout'));
 }
 
 // Global state
@@ -61,12 +61,12 @@ function openActionFilterModal() {
 
     specialCats.forEach(cat => {
         const div = document.createElement('div');
-        div.className = 'flex items-center space-x-2 col-span-full bg-gray-700 p-2 rounded mb-1';
+        div.className = 'legacy-flex legacy-items-center legacy-space-x-2 legacy-col-span-full bg-body-tertiary legacy-p-2 rounded legacy-mb-1';
         div.innerHTML = `
             <input type="checkbox" id="${cat.id}" 
-                class="form-checkbox bg-gray-600 border-gray-500 text-green-500 rounded h-4 w-4"
+                class="form-check-input bg-body-tertiary border-secondary text-green rounded legacy-h-4 legacy-w-4"
                 ${cat.checked ? 'checked' : ''}>
-            <label for="${cat.id}" class="text-sm text-white font-bold cursor-pointer select-none">
+            <label for="${cat.id}" class="text-base text-white fw-bold legacy-cursor-pointer legacy-select-none">
                 ${cat.label}
             </label>
         `;
@@ -75,19 +75,19 @@ function openActionFilterModal() {
 
     // Separator
     const sep = document.createElement('div');
-    sep.className = 'col-span-full h-px bg-gray-600 my-2';
+    sep.className = 'legacy-col-span-full legacy-h-px bg-body-tertiary legacy-my-2';
     list.appendChild(sep);
 
     // 2. Individual Actions
     actions.forEach(action => {
         const isHidden = hiddenActions.has(action);
         const div = document.createElement('div');
-        div.className = 'flex items-center space-x-2';
+        div.className = 'legacy-flex legacy-items-center legacy-space-x-2';
         div.innerHTML = `
             <input type="checkbox" id="act_${action}" value="${action}" 
-                class="action-checkbox form-checkbox bg-gray-700 border-gray-500 text-blue-500 rounded h-4 w-4"
+                class="action-checkbox form-check-input bg-body-tertiary border-secondary text-blue rounded legacy-h-4 legacy-w-4"
                 ${!isHidden ? 'checked' : ''}>
-            <label for="act_${action}" class="text-sm text-gray-300 truncate cursor-pointer select-none" title="${action}">
+            <label for="act_${action}" class="text-base text-body legacy-truncate legacy-cursor-pointer legacy-select-none" title="${action}">
                 ${action}
             </label>
         `;
@@ -101,53 +101,29 @@ function closeActionFilterModal() {
     document.getElementById('actionFilterModal').classList.add('hidden');
 }
 
-async function saveFullTimeline() {
-    const table = document.querySelector('table'); // The main timeline table
-    if (!table) return;
-
-    // Use a proxy to avoid CORS issues with rpglogs icons
-    const proxyBase = '/image-proxy?url=';
-
+// Use the same renderer as the comparison page; supports Tabler's modern colors.
+async function captureTimelineElement(element, filename) {
+    const host = document.createElement('div');
+    host.style.cssText = 'position:fixed;left:-100000px;top:0;pointer-events:none';
+    const clone = element.cloneNode(true);
+    clone.style.cssText += ';position:relative;left:0;top:0;max-height:none;height:auto;overflow:visible';
+    clone.style.width = Math.max(element.clientWidth, element.scrollWidth) + 'px';
+    clone.querySelectorAll('th,.c-phase,.c-time,.c-action,.c-base,.c-hit').forEach(el => el.style.setProperty('position', 'static', 'important'));
+    clone.querySelectorAll('tr').forEach(row => { row.style.contentVisibility = 'visible'; });
+    clone.querySelectorAll('img').forEach(img => {
+        const url = new URL(img.src, location.href);
+        if (url.origin !== location.origin && ['assets.rpglogs.com', 'raw.githubusercontent.com'].includes(url.hostname)) {
+            img.src = window.IMAGE_PROXY_BASE + '?url=' + encodeURIComponent(url.href);
+        }
+    });
+    host.appendChild(clone); document.body.appendChild(host);
     try {
-        const canvas = await html2canvas(table, {
-            useCORS: true,
-            allowTaint: true,
-            backgroundColor: '#111827', // gray-900 matches background
-            onclone: (clonedDoc) => {
-                const clonedTable = clonedDoc.querySelector('table');
-
-                // 1. Handle Proxy for Images
-                const images = clonedTable.querySelectorAll('img');
-                const timestamp = Date.now();
-                images.forEach(img => {
-                    const src = img.src;
-                    // Only proxy if HTTP(S) and not already proxied
-                    if (src && src.startsWith('http') && !src.includes('image-proxy')) {
-                        // Check for base64 or data uri? No startswith http handles that.
-                        // Add timestamp to bust cache
-                        img.src = proxyBase + encodeURIComponent(src) + '&t=' + timestamp;
-                        // Force crossOrigin to anonymous just in case (though we use Proxy)
-                        img.crossOrigin = 'anonymous';
-                    }
-                });
-
-                // 2. Disable Sticky Headers (force them to stay in place at top)
-                const stickies = clonedTable.querySelectorAll('[style*="sticky"]');
-                stickies.forEach(el => {
-                    el.style.position = 'static';
-                });
-            }
-        });
-
-        // Trigger Download
-        const link = document.createElement('a');
-        link.download = `timeline_full_${Date.now()}.png`;
-        link.href = canvas.toDataURL('image/png');
-        link.click();
-    } catch (err) {
-        console.error('Screenshot failed:', err);
-        alert('Screenshot failed. Check console.');
-    }
+        const dataUrl = await modernScreenshot.domToPng(clone, { scale: 1, backgroundColor: getComputedStyle(document.body).backgroundColor });
+        const link = document.createElement('a'); link.href = dataUrl; link.download = filename; link.click();
+    } catch (error) {
+        console.error('Screenshot failed:', error);
+        alert('画像の保存に失敗しました: ' + error.message);
+    } finally { host.remove(); }
 }
 
 function toggleAllActions(check) {
@@ -243,38 +219,38 @@ function openPlayerTimeline(playerName) {
     // Set Title with Icon if available
     let iconHtml = '';
     if (pDetail && pDetail.icon) {
-        iconHtml = `<img src="${pDetail.icon}" class="w-6 h-6 mr-2 inline-block rounded-sm">`;
+        iconHtml = `<img src="${pDetail.icon}" class="legacy-w-6 legacy-h-6 legacy-mr-2 legacy-inline-block rounded">`;
     }
     title.innerHTML =
-        `${playerName} <span class="text-sm text-gray-400 font-normal">(${pDetail.job || 'Unknown'})</span>`;
+        `${playerName} <span class="text-base text-secondary fw-normal">(${pDetail.job || 'Unknown'})</span>`;
 
     // Build Content
     if (pDetail && pDetail.icon) {
-        iconHtml = `<img src="${pDetail.icon}" class="w-6 h-6 mr-2 inline-block rounded-sm">`;
+        iconHtml = `<img src="${pDetail.icon}" class="legacy-w-6 legacy-h-6 legacy-mr-2 legacy-inline-block rounded">`;
     }
     title.innerHTML =
-        `${pDetail.name} <span class="text-sm text-gray-400 font-normal">&nbsp;[${pDetail.job}]</span>`;
+        `${pDetail.name} <span class="text-base text-secondary fw-normal">&nbsp;[${pDetail.job}]</span>`;
 
     // Clear Body
     content.innerHTML = '';
 
     // Add Disclaimer
-    content.innerHTML += '<div class="text-xs text-gray-500 mb-2 pl-2 border-l-2 border-gray-600">※ 戦闘開始前（0:00以前）に使用されたスキルは表示されません。</div>';
+    content.innerHTML += '<div class="text-base text-secondary legacy-mb-2 legacy-pl-2 legacy-border-l-2 border-secondary">※ 戦闘開始前（0:00以前）に使用されたスキルは表示されません。</div>';
 
     if (timeline.length === 0) {
-        content.innerHTML += '<div class="text-gray-400 text-center py-4">No major cooldowns used.</div>';
+        content.innerHTML += '<div class="text-secondary text-center legacy-py-4">No major cooldowns used.</div>';
     } else {
         let html = `
-            <table class="w-full text-left border-collapse text-sm text-gray-300">
+            <table class="legacy-w-full text-start legacy-border-collapse text-base text-body">
                 <thead>
-                    <tr class="border-b border-gray-700 text-gray-400 font-mono text-xs uppercase tracking-wider">
-                        <th class="p-2 w-20 text-right">Time</th>
-                        <th class="p-2 text-left">Action</th>
-                        <th class="p-2 pl-4">Skill</th>
-                        <th class="p-2 pl-4">対象</th>
+                    <tr class="legacy-border-b border-secondary text-secondary font-monospace text-base uppercase tracking-wider">
+                        <th class="legacy-p-2 legacy-w-20 text-end">Time</th>
+                        <th class="legacy-p-2 text-start">Action</th>
+                        <th class="legacy-p-2 legacy-pl-4">Skill</th>
+                        <th class="legacy-p-2 legacy-pl-4">対象</th>
                     </tr>
                 </thead>
-                <tbody class="divide-y divide-gray-700 bg-gray-800">
+                <tbody class="  bg-surface">
         `;
 
         timeline.forEach(event => {
@@ -284,27 +260,27 @@ function openPlayerTimeline(playerName) {
                 null;
 
             const iconHtml = iconUrl ?
-                `<img src="${iconUrl}" class="w-6 h-6 object-contain rounded-sm border ${event.broken ? "border-red-500 border-2" : "border-gray-600"}" onerror="this.style.display='none'">` :
-                '<div class="w-6 h-6"></div>';
+                `<img src="${iconUrl}" class="legacy-w-6 legacy-h-6 legacy-object-contain rounded border ${event.broken ? "border-red border-2" : "border-secondary"}" onerror="this.style.display='none'">` :
+                '<div class="legacy-w-6 legacy-h-6"></div>';
 
             // 対象（ターゲット）表示。自分自身への使用は「自分」、他者対象は名前を強調
             const targetHtml = event.target ?
                 (event.self_target ?
-                    `<span class="text-gray-500 text-xs">自分</span>` :
-                    `<span class="text-cyan-300 font-medium">${event.target}</span>`) :
-                `<span class="text-gray-600">-</span>`;
+                    `<span class="text-secondary text-base">自分</span>` :
+                    `<span class="text-cyan fw-medium">${event.target}</span>`) :
+                `<span class="text-secondary">-</span>`;
 
             html += `
-                <tr class="hover:bg-gray-700 transition-colors">
-                    <td class="p-2 text-right font-mono text-gray-400">${timeStr}</td>
-                    <td class="p-2 text-left text-gray-300 text-xs align-middle">
+                <tr class=" ">
+                    <td class="legacy-p-2 text-end font-monospace text-secondary">${timeStr}</td>
+                    <td class="legacy-p-2 text-start text-body text-base align-middle">
                         ${event.enemy_action || "-"}
                     </td>
-                    <td class="p-2 pl-4 align-middle flex items-center gap-2">
+                    <td class="legacy-p-2 legacy-pl-4 align-middle legacy-flex legacy-items-center legacy-gap-2">
                         ${iconHtml}
-                        <span class="text-gray-200 font-medium">${event.name}${event.broken ? " <span title='Barrier Broken' class='text-red-400 text-xs'>💔</span>" : ""}</span>
+                        <span class="text-body fw-medium">${event.name}${event.broken ? " <span title='Barrier Broken' class='text-red text-base'>💔</span>" : ""}</span>
                     </td>
-                    <td class="p-2 pl-4 align-middle">${targetHtml}</td>
+                    <td class="legacy-p-2 legacy-pl-4 align-middle">${targetHtml}</td>
                 </tr>
             `;
         });
@@ -398,16 +374,16 @@ function openActionDetail(actionName, actionTime) {
     };
 
     let html = `
-        <table class="w-full text-left border-collapse text-sm text-gray-300">
+        <table class="legacy-w-full text-start legacy-border-collapse text-base text-body">
             <thead>
-                <tr class="border-b border-gray-700 text-gray-400 text-xs uppercase tracking-wider">
-                    <th class="p-2">軽減スキル</th>
-                    <th class="p-2">使用者</th>
-                    <th class="p-2">対象（誰に入っていたか）</th>
-                    <th class="p-2 text-right">残り時間</th>
+                <tr class="legacy-border-b border-secondary text-secondary text-base uppercase tracking-wider">
+                    <th class="legacy-p-2">軽減スキル</th>
+                    <th class="legacy-p-2">使用者</th>
+                    <th class="legacy-p-2">対象（誰に入っていたか）</th>
+                    <th class="legacy-p-2 text-end">残り時間</th>
                 </tr>
             </thead>
-            <tbody class="divide-y divide-gray-700 bg-gray-800">
+            <tbody class="  bg-surface">
     `;
 
     let foundAny = false;
@@ -420,9 +396,9 @@ function openActionDetail(actionName, actionTime) {
             const meta = mitCols[colKey] || {};
             const displayName = meta.name || colKey;
             const skillIcon = meta.icon
-                ? `<img src="${ICON_BASE}/abilities/${meta.icon}" class="w-6 h-6 object-contain rounded-sm border border-gray-600 inline-block mr-2 align-middle">`
+                ? `<img src="${ICON_BASE}/abilities/${meta.icon}" class="legacy-w-6 legacy-h-6 legacy-object-contain rounded border border-secondary legacy-inline-block legacy-mr-2 align-middle">`
                 : '';
-            const brokenTag = col.is_broken ? " <span title='バリア消滅' class='text-red-400 text-xs'>💔</span>" : "";
+            const brokenTag = col.is_broken ? " <span title='バリア消滅' class='text-red text-base'>💔</span>" : "";
 
             const sources = (col.sources && col.sources.length) ? col.sources : null;
 
@@ -434,22 +410,22 @@ function openActionDetail(actionName, actionTime) {
                     if (r !== null && (rem === null || r < rem)) rem = r;
                 }
             }
-            let remStr = '<span class="text-gray-600">-</span>';
+            let remStr = '<span class="text-secondary">-</span>';
             if (rem !== null) {
-                const c = rem < 2 ? 'text-yellow-400' : 'text-green-400';
-                remStr = `<span class="font-mono ${c}">${rem.toFixed(1)}s</span>`;
+                const c = rem < 2 ? 'text-yellow' : 'text-green';
+                remStr = `<span class="font-monospace ${c}">${rem.toFixed(1)}s</span>`;
             }
 
             let srcHtml;
             if (sources) {
                 srcHtml = sources.map(s => {
                     const pd = playerDetails[s] || {};
-                    const icon = pd.icon ? `<img src="${pd.icon}" class="w-5 h-5 inline-block rounded-sm mr-1 align-middle">` : '';
-                    const job = pd.job ? `<span class="text-gray-500 text-xs ml-1">${pd.job}</span>` : '';
-                    return `${icon}<span class="text-white font-medium">${shortName(s)}</span>${job}`;
-                }).join('<span class="text-gray-600 mx-1">/</span>');
+                    const icon = pd.icon ? `<img src="${pd.icon}" class="legacy-w-5 legacy-h-5 legacy-inline-block rounded legacy-mr-1 align-middle">` : '';
+                    const job = pd.job ? `<span class="text-secondary text-base legacy-ml-1">${pd.job}</span>` : '';
+                    return `${icon}<span class="text-white fw-medium">${shortName(s)}</span>${job}`;
+                }).join('<span class="text-secondary legacy-mx-1">/</span>');
             } else {
-                srcHtml = `<span class="text-gray-500 text-xs">（効果のみ検出）</span>`;
+                srcHtml = `<span class="text-secondary text-base">（効果のみ検出）</span>`;
             }
 
             // 対象（誰に入っていたか）：各被弾者のbuffsに、この軽減のステータスIDが乗っているか判定。
@@ -465,31 +441,31 @@ function openActionDetail(actionName, actionTime) {
             }
             let tgtHtml;
             if (targets.length === 0) {
-                tgtHtml = `<span class="text-gray-600">-</span>`;
+                tgtHtml = `<span class="text-secondary">-</span>`;
             } else if (partySize > 0 && targets.length >= partySize) {
-                tgtHtml = `<span class="text-cyan-300 font-medium">全員</span>`;
+                tgtHtml = `<span class="text-cyan fw-medium">全員</span>`;
             } else {
                 // 対象を実名で列挙（バリア等が誰に入っていたか分かるように）
                 tgtHtml = targets.map(t => {
                     const pd = playerDetails[t] || {};
-                    const icon = pd.icon ? `<img src="${pd.icon}" class="w-5 h-5 inline-block rounded-sm mr-1 align-middle">` : '';
-                    return `${icon}<span class="text-cyan-300">${shortName(t)}</span>`;
-                }).join('<span class="text-gray-600 mx-1">/</span>');
+                    const icon = pd.icon ? `<img src="${pd.icon}" class="legacy-w-5 legacy-h-5 legacy-inline-block rounded legacy-mr-1 align-middle">` : '';
+                    return `${icon}<span class="text-cyan">${shortName(t)}</span>`;
+                }).join('<span class="text-secondary legacy-mx-1">/</span>');
             }
 
             html += `
-                <tr class="hover:bg-gray-700">
-                    <td class="p-2 flex items-center">${skillIcon}<span class="text-gray-200">${displayName}${brokenTag}</span></td>
-                    <td class="p-2">${srcHtml}</td>
-                    <td class="p-2">${tgtHtml}</td>
-                    <td class="p-2 text-right">${remStr}</td>
+                <tr class="">
+                    <td class="legacy-p-2 legacy-flex legacy-items-center">${skillIcon}<span class="text-body">${displayName}${brokenTag}</span></td>
+                    <td class="legacy-p-2">${srcHtml}</td>
+                    <td class="legacy-p-2">${tgtHtml}</td>
+                    <td class="legacy-p-2 text-end">${remStr}</td>
                 </tr>
             `;
         }
     }
 
     if (!foundAny) {
-        html += `<tr><td colspan="4" class="p-4 text-center text-gray-500">この被弾に効いていた軽減はありません</td></tr>`;
+        html += `<tr><td colspan="4" class="legacy-p-4 text-center text-secondary">この被弾に効いていた軽減はありません</td></tr>`;
     }
 
     html += '</tbody></table>';
@@ -581,58 +557,10 @@ function downloadHojoringXML() {
 // Save Modal as Image (Full Scroll Capture)
 function saveModalAsImage(elementId, filename) {
     const element = document.getElementById(elementId);
-    if (!element) {
-        alert('Element not found');
-        return;
-    }
-
-    // 1. Create a deep clone to manipulate styling without affecting UI
-    const clone = element.cloneNode(true);
-
-    // 2. Style the clone to show full content
-    clone.style.position = 'absolute';
-    clone.style.left = '-9999px';
-    clone.style.top = '0';
-    clone.style.width = element.clientWidth + 'px'; // Maintain width
-    clone.style.height = 'auto'; // Expand height
-    clone.style.overflow = 'visible'; // Show all content
-    clone.style.maxHeight = 'none';
-
-    // Ensure text colors are visible (if relying on parent bg)
-    clone.style.backgroundColor = '#1f2937'; // bg-gray-800 equiv
-    clone.style.color = 'white';
-
-    document.body.appendChild(clone);
-
-    // 3. Capture with html2canvas
-    html2canvas(clone, {
-        backgroundColor: '#1f2937',
-        scale: 2, // High resolution
-        logging: false,
-        useCORS: true
-    }).then(canvas => {
-        // 4. Download
-        const link = document.createElement('a');
-        link.download = filename;
-        link.href = canvas.toDataURL('image/png');
-        link.click();
-
-        // 5. Cleanup
-        document.body.removeChild(clone);
-    }).catch(err => {
-        console.error('Image capture failed:', err);
-        alert('Failed to save image.');
-        document.body.removeChild(clone);
-    });
+    if (!element) { alert('Element not found'); return; }
+    return captureTimelineElement(element, filename);
 }
 
-/* ============================================================
- * 被弾内訳モーダル（Hit Dmg セルのクリックで開く）
- * 「どの軽減スキルが何%効いて、いくら減らしたか」「バリアがいくら吸ったか」
- * 「HPに実際に向かった量（実被弾）」を1画面で見せる。
- * ==========================================================*/
-
-// XSS/レイアウト崩れ防止（プレイヤー名・スキル名をそのまま埋め込むため）
 function ddEscape(s) {
     return String(s === null || s === undefined ? '' : s)
         .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
@@ -675,7 +603,7 @@ function ddMitChain(base, mits) {
 // 軽減率は1つぶんしか掛けていないことを明示する。
 function ddStackBadge(e) {
     if (!e.stackCount || e.stackCount <= 1) return '';
-    return `<span class="ml-1 px-1 rounded bg-gray-700 text-gray-400 text-[10px] align-middle"
+    return `<span class="legacy-ml-1 legacy-px-1 rounded bg-body-tertiary text-secondary text-base align-middle"
         title="同名の効果は重複しないため、${e.stackCount}人ぶん発動していても軽減は1つぶんだけ計上している">×${e.stackCount} 重複</span>`;
 }
 
@@ -691,14 +619,14 @@ function openDamageDetail(actionName, actionTime) {
     const ev = ddFindEvent(actionName, actionTime);
     if (!ev) {
         title.innerText = actionName;
-        content.innerHTML = '<div class="p-6 text-center text-gray-500">この被弾のデータが見つかりませんでした</div>';
+        content.innerHTML = '<div class="legacy-p-6 text-center text-secondary">この被弾のデータが見つかりませんでした</div>';
         modal.classList.remove('hidden');
         return;
     }
 
     const relSec = Math.floor(ev.rel_time || 0);
     const timeStr = String(Math.floor(relSec / 60)).padStart(2, '0') + ':' + String(relSec % 60).padStart(2, '0');
-    title.innerHTML = `<span class="text-gray-400 mr-2 font-mono">${timeStr}</span>${ddEscape(actionName)}<span class="text-gray-500 text-sm ml-2">の被弾内訳</span>`;
+    title.innerHTML = `<span class="text-secondary legacy-mr-2 font-monospace">${timeStr}</span>${ddEscape(actionName)}<span class="text-secondary text-base legacy-ml-2">の被弾内訳</span>`;
 
     // ---- 被弾者ごとの値 ----
     // raw       素のダメージ（軽減前・バリア吸収前）
@@ -824,55 +752,55 @@ function openDamageDetail(actionName, actionTime) {
 
     // ================= ① 最終結果（素→軽減→バリア→実被弾）=================
     const repIcon = rep && playerDetails[rep.name] && playerDetails[rep.name].icon
-        ? `<img src="${playerDetails[rep.name].icon}" class="w-5 h-5 inline-block rounded-sm mr-1 align-middle">` : '';
+        ? `<img src="${playerDetails[rep.name].icon}" class="legacy-w-5 legacy-h-5 legacy-inline-block rounded legacy-mr-1 align-middle">` : '';
     const repJob = rep && playerDetails[rep.name] ? (playerDetails[rep.name].job || '') : '';
 
     html += `
     <div>
-        <div class="text-xs text-gray-400 mb-2">
-            基準 ${repIcon}<span class="text-white font-bold">${ddEscape(rep ? shortName(rep.name) : '-')}</span>
-            <span class="text-gray-500 ml-1">${ddEscape(repJob)}</span>
-            <span class="text-gray-600 ml-1">（最大被弾者）</span>
-            <span class="ml-2 text-gray-500">／ 被弾者 ${players.length}人</span>
-            ${(ev.hits || 1) > 1 ? `<span class="ml-2 text-yellow-600/90">※ ${ev.hits}ヒット合算</span>` : ''}
+        <div class="text-base text-secondary legacy-mb-2">
+            基準 ${repIcon}<span class="text-white fw-bold">${ddEscape(rep ? shortName(rep.name) : '-')}</span>
+            <span class="text-secondary legacy-ml-1">${ddEscape(repJob)}</span>
+            <span class="text-secondary legacy-ml-1">（最大被弾者）</span>
+            <span class="legacy-ml-2 text-secondary">／ 被弾者 ${players.length}人</span>
+            ${(ev.hits || 1) > 1 ? `<span class="legacy-ml-2 text-yellow">※ ${ev.hits}ヒット合算</span>` : ''}
         </div>
 
-        <div class="flex flex-wrap items-stretch gap-1 text-center">
-            <div class="flex-1 min-w-[8rem] rounded border border-gray-600 bg-gray-900/70 p-2">
-                <div class="text-[11px] text-gray-500">素のダメージ</div>
-                <div class="text-xl font-mono text-gray-100">${ddNum(raw)}</div>
-                <div class="text-[10px] text-gray-600">軽減・バリア適用前</div>
+        <div class="legacy-flex legacy-flex-wrap legacy-items-stretch legacy-gap-1 text-center">
+            <div class="legacy-flex-1 legacy-min-w-[8rem] rounded border border-secondary bg-body legacy-p-2">
+                <div class="text-base text-secondary">素のダメージ</div>
+                <div class="fs-2 font-monospace text-body">${ddNum(raw)}</div>
+                <div class="text-base text-secondary">軽減・バリア適用前</div>
             </div>
-            <div class="flex items-center text-gray-600 text-xl px-1">−</div>
-            <div class="flex-1 min-w-[8rem] rounded border border-green-700/60 bg-green-900/20 p-2">
-                <div class="text-[11px] text-gray-400">軽減（合計 ${(mitRate * 100).toFixed(1)}%）</div>
-                <div class="text-xl font-mono text-green-400">${ddNum(cutByMit)}</div>
-                <div class="text-[10px] text-green-600">軽減スキル ${mitSkills.length}種</div>
+            <div class="legacy-flex legacy-items-center text-secondary fs-2 legacy-px-1">−</div>
+            <div class="legacy-flex-1 legacy-min-w-[8rem] rounded border border-green bg-green-lt legacy-p-2">
+                <div class="text-base text-secondary">軽減（合計 ${(mitRate * 100).toFixed(1)}%）</div>
+                <div class="fs-2 font-monospace text-green">${ddNum(cutByMit)}</div>
+                <div class="text-base text-green">軽減スキル ${mitSkills.length}種</div>
             </div>
-            <div class="flex items-center text-gray-600 text-xl px-1">−</div>
-            <div class="flex-1 min-w-[8rem] rounded border border-cyan-700/60 bg-cyan-900/20 p-2">
-                <div class="text-[11px] text-gray-400">バリア吸収（合計）</div>
-                <div class="text-xl font-mono text-cyan-300">${ddNum(absorbed)}</div>
-                <div class="text-[10px] text-cyan-600">バリアスキル ${barrierSkills.length}種</div>
+            <div class="legacy-flex legacy-items-center text-secondary fs-2 legacy-px-1">−</div>
+            <div class="legacy-flex-1 legacy-min-w-[8rem] rounded border border-cyan bg-cyan-lt legacy-p-2">
+                <div class="text-base text-secondary">バリア吸収（合計）</div>
+                <div class="fs-2 font-monospace text-cyan">${ddNum(absorbed)}</div>
+                <div class="text-base text-cyan">バリアスキル ${barrierSkills.length}種</div>
             </div>
-            <div class="flex items-center text-gray-600 text-xl px-1">＝</div>
-            <div class="flex-1 min-w-[8rem] rounded border-2 border-orange-600 bg-orange-900/25 p-2">
-                <div class="text-[11px] text-gray-300">実被弾ダメージ</div>
-                <div class="text-xl font-mono text-orange-300 font-bold">${ddNum(hit)}</div>
-                <div class="text-[10px] text-gray-500">HPに向かった量</div>
+            <div class="legacy-flex legacy-items-center text-secondary fs-2 legacy-px-1">＝</div>
+            <div class="legacy-flex-1 legacy-min-w-[8rem] rounded border-2 border-orange bg-orange-lt legacy-p-2">
+                <div class="text-base text-body">実被弾ダメージ</div>
+                <div class="fs-2 font-monospace text-orange fw-bold">${ddNum(hit)}</div>
+                <div class="text-base text-secondary">HPに向かった量</div>
             </div>
         </div>
 
-        <div class="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-[11px] text-gray-500">
-            <span class="font-mono">${ddNum(raw)} − 軽減 ${ddNum(cutByMit)} = 軽減後 ${ddNum(mitigated)} − バリア ${ddNum(absorbed)} = 実被弾 ${ddNum(hit)}</span>
-            <span>HP減 <span class="font-mono text-gray-400">${ddNum(rep ? rep.hpLost : 0)}</span></span>
-            ${(rep && rep.overkill > 0) ? `<span class="text-red-400">オーバーキル <span class="font-mono">${ddNum(rep.overkill)}</span></span>` : ''}
-            ${players.length > 1 ? `<span class="text-gray-600">｜パーティ全体: 素 ${ddNum(partyRaw)} / バリア ${ddNum(partyAbsorbed)} / 実被弾 ${ddNum(partyHit)}</span>` : ''}
+        <div class="legacy-mt-2 legacy-flex legacy-flex-wrap legacy-gap-x-4 legacy-gap-y-1 text-base text-secondary">
+            <span class="font-monospace">${ddNum(raw)} − 軽減 ${ddNum(cutByMit)} = 軽減後 ${ddNum(mitigated)} − バリア ${ddNum(absorbed)} = 実被弾 ${ddNum(hit)}</span>
+            <span>HP減 <span class="font-monospace text-secondary">${ddNum(rep ? rep.hpLost : 0)}</span></span>
+            ${(rep && rep.overkill > 0) ? `<span class="text-red">オーバーキル <span class="font-monospace">${ddNum(rep.overkill)}</span></span>` : ''}
+            ${players.length > 1 ? `<span class="text-secondary">｜パーティ全体: 素 ${ddNum(partyRaw)} / バリア ${ddNum(partyAbsorbed)} / 実被弾 ${ddNum(partyHit)}</span>` : ''}
         </div>
     </div>`;
 
     if (specials.length) {
-        html += `<div class="rounded border border-yellow-700/50 bg-yellow-900/10 p-2 text-xs text-yellow-300">
+        html += `<div class="rounded border border-yellow bg-yellow-lt legacy-p-2 text-base text-yellow">
             ⚠ 無敵・生存系が発動中: ${specials.map(e => ddEscape(e.name)).join(' / ')}（軽減率としては計上していません）
         </div>`;
     }
@@ -880,83 +808,83 @@ function openDamageDetail(actionName, actionTime) {
     // ================= ② 軽減スキル =================
     html += `
     <div>
-        <div class="flex items-baseline gap-2 mb-1">
-            <h4 class="text-sm font-bold text-green-300">🛡️ 軽減スキル<span class="text-gray-500 font-normal ml-1">（ダメージそのものを減らす）</span></h4>
-            ${!typeAmbiguous ? `<span class="text-[11px] text-gray-500">実測との一致から <span class="text-gray-300">${dmgType}ダメージ</span>として計算</span>` : ''}
+        <div class="legacy-flex legacy-items-baseline legacy-gap-2 legacy-mb-1">
+            <h4 class="text-base fw-bold text-green">🛡️ 軽減スキル<span class="text-secondary fw-normal legacy-ml-1">（ダメージそのものを減らす）</span></h4>
+            ${!typeAmbiguous ? `<span class="text-base text-secondary">実測との一致から <span class="text-body">${dmgType}ダメージ</span>として計算</span>` : ''}
         </div>
-        <table class="w-full text-left border-collapse text-sm text-gray-300">
+        <table class="legacy-w-full text-start legacy-border-collapse text-base text-body">
             <thead>
-                <tr class="border-b border-gray-700 text-gray-400 text-[11px] uppercase tracking-wider">
-                    <th class="p-2">スキル</th>
-                    <th class="p-2">使用者</th>
-                    <th class="p-2 text-right">軽減率</th>
-                    <th class="p-2 text-right">軽減量</th>
-                    <th class="p-2">適用範囲</th>
+                <tr class="legacy-border-b border-secondary text-secondary text-base uppercase tracking-wider">
+                    <th class="legacy-p-2">スキル</th>
+                    <th class="legacy-p-2">使用者</th>
+                    <th class="legacy-p-2 text-end">軽減率</th>
+                    <th class="legacy-p-2 text-end">軽減量</th>
+                    <th class="legacy-p-2">適用範囲</th>
                 </tr>
             </thead>
-            <tbody class="divide-y divide-gray-700/70">`;
+            <tbody class=" ">`;
 
     const hasResidual = Math.abs(residual) >= Math.max(1, raw * 0.005);
     if (chain.rows.length === 0 && !hasResidual) {
-        html += `<tr><td colspan="5" class="p-4 text-center text-gray-500">この被弾に効いていた軽減スキルはありません</td></tr>`;
+        html += `<tr><td colspan="5" class="legacy-p-4 text-center text-secondary">この被弾に効いていた軽減スキルはありません</td></tr>`;
     } else {
         for (const row of chain.rows) {
             const e = row.e;
             const icon = e.icon
-                ? `<img src="${ICON_BASE}/abilities/${e.icon}" class="w-6 h-6 object-contain rounded-sm border border-gray-600 inline-block mr-2 align-middle">` : '';
+                ? `<img src="${ICON_BASE}/abilities/${e.icon}" class="legacy-w-6 legacy-h-6 legacy-object-contain rounded border border-secondary legacy-inline-block legacy-mr-2 align-middle">` : '';
             const srcHtml = e.sources.length
                 ? e.sources.map(sv => {
                     const pd = playerDetails[sv] || {};
-                    const pi = pd.icon ? `<img src="${pd.icon}" class="w-5 h-5 inline-block rounded-sm mr-1 align-middle">` : '';
+                    const pi = pd.icon ? `<img src="${pd.icon}" class="legacy-w-5 legacy-h-5 legacy-inline-block rounded legacy-mr-1 align-middle">` : '';
                     return `${pi}<span class="text-white">${ddEscape(shortName(sv))}</span>`;
-                }).join('<span class="text-gray-600 mx-1">/</span>')
-                : '<span class="text-gray-500 text-xs">（効果のみ検出）</span>';
+                }).join('<span class="text-secondary legacy-mx-1">/</span>')
+                : '<span class="text-secondary text-base">（効果のみ検出）</span>';
             const tgtHtml = (players.length > 0 && e.targets.length >= players.length)
-                ? `<span class="text-cyan-300">被弾者全員</span>`
-                : `<span class="text-cyan-300">${e.targets.length}/${players.length}人</span>`;
+                ? `<span class="text-cyan">被弾者全員</span>`
+                : `<span class="text-cyan">${e.targets.length}/${players.length}人</span>`;
             html += `
-                <tr class="hover:bg-gray-700/40">
-                    <td class="p-2">${icon}<span class="text-gray-200">${ddEscape(e.name)}</span>${e.broken ? ' <span class="text-red-400 text-xs" title="効果が途中で切れた">💔</span>' : ''}
+                <tr class="">
+                    <td class="legacy-p-2">${icon}<span class="text-body">${ddEscape(e.name)}</span>${e.broken ? ' <span class="text-red text-base" title="効果が途中で切れた">💔</span>' : ''}
                         ${ddStackBadge(e)}
-                        <span class="text-gray-600 text-[11px] ml-1">${ddEscape(e.group)}</span></td>
-                    <td class="p-2">${srcHtml}</td>
-                    <td class="p-2 text-right font-mono text-green-400">${Math.round(row.m * 100)}%</td>
-                    <td class="p-2 text-right font-mono text-green-300">${ddNum(row.saved)}</td>
-                    <td class="p-2 text-xs">${tgtHtml}</td>
+                        <span class="text-secondary text-base legacy-ml-1">${ddEscape(e.group)}</span></td>
+                    <td class="legacy-p-2">${srcHtml}</td>
+                    <td class="legacy-p-2 text-end font-monospace text-green">${Math.round(row.m * 100)}%</td>
+                    <td class="legacy-p-2 text-end font-monospace text-green">${ddNum(row.saved)}</td>
+                    <td class="legacy-p-2 text-base">${tgtHtml}</td>
                 </tr>`;
         }
         if (hasResidual) {
             const isPlus = residual > 0;
             html += `
-                <tr class="bg-gray-900/40">
-                    <td class="p-2 text-gray-400">${isPlus ? '未計上の軽減' : '見積り超過'}
-                        <span class="text-gray-600 text-[11px] ml-1">（軽減率テーブル未登録のスキルやダメージ上昇デバフによる差）</span></td>
-                    <td class="p-2 text-gray-600">-</td>
-                    <td class="p-2 text-right font-mono text-gray-500">-</td>
-                    <td class="p-2 text-right font-mono ${isPlus ? 'text-green-300' : 'text-red-400'}">${isPlus ? '' : '−'}${ddNum(Math.abs(residual))}</td>
-                    <td class="p-2 text-xs text-gray-600">実測との差</td>
+                <tr class="bg-body">
+                    <td class="legacy-p-2 text-secondary">${isPlus ? '未計上の軽減' : '見積り超過'}
+                        <span class="text-secondary text-base legacy-ml-1">（軽減率テーブル未登録のスキルやダメージ上昇デバフによる差）</span></td>
+                    <td class="legacy-p-2 text-secondary">-</td>
+                    <td class="legacy-p-2 text-end font-monospace text-secondary">-</td>
+                    <td class="legacy-p-2 text-end font-monospace ${isPlus ? 'text-green' : 'text-red'}">${isPlus ? '' : '−'}${ddNum(Math.abs(residual))}</td>
+                    <td class="legacy-p-2 text-base text-secondary">実測との差</td>
                 </tr>`;
         }
     }
     html += `
-            <tr class="border-t-2 border-gray-600 bg-gray-900/60 font-bold">
-                <td class="p-2 text-white" colspan="2">軽減率合計（実測）</td>
-                <td class="p-2 text-right font-mono text-green-400">${(mitRate * 100).toFixed(1)}%</td>
-                <td class="p-2 text-right font-mono text-green-400">${ddNum(cutByMit)}</td>
-                <td class="p-2 text-xs text-gray-500">${ddNum(raw)} → ${ddNum(mitigated)}</td>
+            <tr class="legacy-border-t-2 border-secondary bg-body fw-bold">
+                <td class="legacy-p-2 text-white" colspan="2">軽減率合計（実測）</td>
+                <td class="legacy-p-2 text-end font-monospace text-green">${(mitRate * 100).toFixed(1)}%</td>
+                <td class="legacy-p-2 text-end font-monospace text-green">${ddNum(cutByMit)}</td>
+                <td class="legacy-p-2 text-base text-secondary">${ddNum(raw)} → ${ddNum(mitigated)}</td>
             </tr>
         </tbody></table>`;
 
     if (mitOffTarget.length) {
-        html += `<div class="mt-2 text-[11px] text-gray-500">
+        html += `<div class="legacy-mt-2 text-base text-secondary">
             発動中だが ${ddEscape(rep ? shortName(rep.name) : '')} には乗っていなかった軽減:
-            ${mitOffTarget.map(e => `<span class="inline-block px-1.5 py-0.5 mx-0.5 rounded bg-gray-700/50 text-gray-400">${ddEscape(e.name)}</span>`).join('')}
+            ${mitOffTarget.map(e => `<span class="legacy-inline-block legacy-px-1.5 legacy-py-0.5 legacy-mx-0.5 rounded bg-body-tertiary text-secondary">${ddEscape(e.name)}</span>`).join('')}
         </div>`;
     }
     if (notCounted.length) {
-        html += `<div class="mt-1 text-[11px] text-gray-600">
+        html += `<div class="legacy-mt-1 text-base text-secondary">
             軽減でもバリアでもない支援（被弾ダメージは減らない）:
-            ${notCounted.map(e => `<span class="inline-block px-1.5 py-0.5 mx-0.5 rounded bg-gray-800 text-gray-500">${ddEscape(e.name)}</span>`).join('')}
+            ${notCounted.map(e => `<span class="legacy-inline-block legacy-px-1.5 legacy-py-0.5 legacy-mx-0.5 rounded bg-surface text-secondary">${ddEscape(e.name)}</span>`).join('')}
         </div>`;
     }
     html += `</div>`;
@@ -964,93 +892,93 @@ function openDamageDetail(actionName, actionTime) {
     // ================= ③ バリアスキル =================
     html += `
     <div>
-        <h4 class="text-sm font-bold text-cyan-300 mb-1">💠 バリアスキル<span class="text-gray-500 font-normal ml-1">（軽減後のダメージを肩代わりして吸収する）</span></h4>
-        <table class="w-full text-left border-collapse text-sm text-gray-300">
+        <h4 class="text-base fw-bold text-cyan legacy-mb-1">💠 バリアスキル<span class="text-secondary fw-normal legacy-ml-1">（軽減後のダメージを肩代わりして吸収する）</span></h4>
+        <table class="legacy-w-full text-start legacy-border-collapse text-base text-body">
             <thead>
-                <tr class="border-b border-gray-700 text-gray-400 text-[11px] uppercase tracking-wider">
-                    <th class="p-2">スキル</th>
-                    <th class="p-2">使用者</th>
-                    <th class="p-2">適用範囲</th>
-                    <th class="p-2 text-right">状態</th>
+                <tr class="legacy-border-b border-secondary text-secondary text-base uppercase tracking-wider">
+                    <th class="legacy-p-2">スキル</th>
+                    <th class="legacy-p-2">使用者</th>
+                    <th class="legacy-p-2">適用範囲</th>
+                    <th class="legacy-p-2 text-end">状態</th>
                 </tr>
             </thead>
-            <tbody class="divide-y divide-gray-700/70">`;
+            <tbody class=" ">`;
     if (barrierSkills.length === 0) {
-        html += `<tr><td colspan="4" class="p-4 text-center text-gray-500">この被弾時に乗っていたバリアはありません</td></tr>`;
+        html += `<tr><td colspan="4" class="legacy-p-4 text-center text-secondary">この被弾時に乗っていたバリアはありません</td></tr>`;
     } else {
         for (const e of barrierSkills) {
             const icon = e.icon
-                ? `<img src="${ICON_BASE}/abilities/${e.icon}" class="w-6 h-6 object-contain rounded-sm border border-gray-600 inline-block mr-2 align-middle">` : '';
+                ? `<img src="${ICON_BASE}/abilities/${e.icon}" class="legacy-w-6 legacy-h-6 legacy-object-contain rounded border border-secondary legacy-inline-block legacy-mr-2 align-middle">` : '';
             const srcHtml = e.sources.length
                 ? e.sources.map(sv => {
                     const pd = playerDetails[sv] || {};
-                    const pi = pd.icon ? `<img src="${pd.icon}" class="w-5 h-5 inline-block rounded-sm mr-1 align-middle">` : '';
+                    const pi = pd.icon ? `<img src="${pd.icon}" class="legacy-w-5 legacy-h-5 legacy-inline-block rounded legacy-mr-1 align-middle">` : '';
                     return `${pi}<span class="text-white">${ddEscape(shortName(sv))}</span>`;
-                }).join('<span class="text-gray-600 mx-1">/</span>')
-                : '<span class="text-gray-500 text-xs">（効果のみ検出）</span>';
+                }).join('<span class="text-secondary legacy-mx-1">/</span>')
+                : '<span class="text-secondary text-base">（効果のみ検出）</span>';
             const tgtHtml = (players.length > 0 && e.targets.length >= players.length)
-                ? `<span class="text-cyan-300">被弾者全員</span>`
-                : `<span class="text-cyan-300">${e.targets.length}/${players.length}人</span>`;
+                ? `<span class="text-cyan">被弾者全員</span>`
+                : `<span class="text-cyan">${e.targets.length}/${players.length}人</span>`;
             html += `
-                <tr class="hover:bg-gray-700/40">
-                    <td class="p-2">${icon}<span class="text-gray-200">${ddEscape(e.name)}</span>
+                <tr class="">
+                    <td class="legacy-p-2">${icon}<span class="text-body">${ddEscape(e.name)}</span>
                         ${ddStackBadge(e)}
-                        <span class="text-gray-600 text-[11px] ml-1">${ddEscape(e.group)}</span></td>
-                    <td class="p-2">${srcHtml}</td>
-                    <td class="p-2 text-xs">${tgtHtml}</td>
-                    <td class="p-2 text-right text-xs">${e.broken ? '<span class="text-red-400">💔 割れた</span>' : '<span class="text-gray-500">維持</span>'}</td>
+                        <span class="text-secondary text-base legacy-ml-1">${ddEscape(e.group)}</span></td>
+                    <td class="legacy-p-2">${srcHtml}</td>
+                    <td class="legacy-p-2 text-base">${tgtHtml}</td>
+                    <td class="legacy-p-2 text-end text-base">${e.broken ? '<span class="text-red">💔 割れた</span>' : '<span class="text-secondary">維持</span>'}</td>
                 </tr>`;
         }
     }
     html += `
-            <tr class="border-t-2 border-gray-600 bg-gray-900/60 font-bold">
-                <td class="p-2 text-white" colspan="3">バリア吸収 合計（実測）</td>
-                <td class="p-2 text-right font-mono text-cyan-300">${ddNum(absorbed)}</td>
+            <tr class="legacy-border-t-2 border-secondary bg-body fw-bold">
+                <td class="legacy-p-2 text-white" colspan="3">バリア吸収 合計（実測）</td>
+                <td class="legacy-p-2 text-end font-monospace text-cyan">${ddNum(absorbed)}</td>
             </tr>
         </tbody></table>
-        <div class="mt-1 text-[11px] text-gray-600">※ 吸収量はスキルごとの内訳がログに残らないため合算のみ。バリアは軽減後のダメージから引かれるので、軽減率には含まれません。</div>
+        <div class="legacy-mt-1 text-base text-secondary">※ 吸収量はスキルごとの内訳がログに残らないため合算のみ。バリアは軽減後のダメージから引かれるので、軽減率には含まれません。</div>
     </div>`;
 
     // ================= ④ 被弾者ごとの内訳 =================
     html += `
     <div>
-        <h4 class="text-sm font-bold text-white mb-1">👥 被弾者ごとの内訳</h4>
-        <table class="w-full text-left border-collapse text-sm text-gray-300">
+        <h4 class="text-base fw-bold text-white legacy-mb-1">👥 被弾者ごとの内訳</h4>
+        <table class="legacy-w-full text-start legacy-border-collapse text-base text-body">
             <thead>
-                <tr class="border-b border-gray-700 text-gray-400 text-[11px] uppercase tracking-wider">
-                    <th class="p-2">プレイヤー</th>
-                    <th class="p-2 text-right">素のダメージ</th>
-                    <th class="p-2 text-right">軽減率</th>
-                    <th class="p-2 text-right">軽減量</th>
-                    <th class="p-2 text-right">バリア吸収</th>
-                    <th class="p-2 text-right">実被弾</th>
-                    <th class="p-2 text-right">HP減 / 過剰</th>
+                <tr class="legacy-border-b border-secondary text-secondary text-base uppercase tracking-wider">
+                    <th class="legacy-p-2">プレイヤー</th>
+                    <th class="legacy-p-2 text-end">素のダメージ</th>
+                    <th class="legacy-p-2 text-end">軽減率</th>
+                    <th class="legacy-p-2 text-end">軽減量</th>
+                    <th class="legacy-p-2 text-end">バリア吸収</th>
+                    <th class="legacy-p-2 text-end">実被弾</th>
+                    <th class="legacy-p-2 text-end">HP減 / 過剰</th>
                 </tr>
             </thead>
-            <tbody class="divide-y divide-gray-700/70">`;
+            <tbody class=" ">`;
     for (const p of players) {
         const pd = playerDetails[p.name] || {};
-        const pi = pd.icon ? `<img src="${pd.icon}" class="w-5 h-5 inline-block rounded-sm mr-1 align-middle">` : '';
+        const pi = pd.icon ? `<img src="${pd.icon}" class="legacy-w-5 legacy-h-5 legacy-inline-block rounded legacy-mr-1 align-middle">` : '';
         const cut = p.raw - p.mitigated;
         const rate = p.raw > 0 ? (cut / p.raw * 100) : 0;
         html += `
-            <tr class="hover:bg-gray-700/40 ${rep && p.name === rep.name ? 'bg-gray-900/40' : ''}">
-                <td class="p-2">${pi}<span class="text-white">${ddEscape(shortName(p.name))}</span>
-                    <span class="text-gray-500 text-[11px] ml-1">${ddEscape(pd.job || '')}</span></td>
-                <td class="p-2 text-right font-mono text-gray-300">${ddNum(p.raw)}</td>
-                <td class="p-2 text-right font-mono ${rate > 0 ? 'text-green-400' : 'text-red-400'}">${rate > 0 ? rate.toFixed(1) + '%' : 'なし'}</td>
-                <td class="p-2 text-right font-mono ${cut > 0 ? 'text-green-300' : 'text-gray-600'}">${cut > 0 ? ddNum(cut) : '-'}</td>
-                <td class="p-2 text-right font-mono ${p.absorbed > 0 ? 'text-cyan-300' : 'text-gray-600'}">${p.absorbed > 0 ? ddNum(p.absorbed) : '-'}</td>
-                <td class="p-2 text-right font-mono text-orange-300 font-bold">${ddNum(p.hit)}</td>
-                <td class="p-2 text-right font-mono text-gray-400">${ddNum(p.hpLost)}${p.overkill > 0 ? ` <span class="text-red-500">/ ${ddNum(p.overkill)}☠</span>` : ''}</td>
+            <tr class=" ${rep && p.name === rep.name ? 'bg-body' : ''}">
+                <td class="legacy-p-2">${pi}<span class="text-white">${ddEscape(shortName(p.name))}</span>
+                    <span class="text-secondary text-base legacy-ml-1">${ddEscape(pd.job || '')}</span></td>
+                <td class="legacy-p-2 text-end font-monospace text-body">${ddNum(p.raw)}</td>
+                <td class="legacy-p-2 text-end font-monospace ${rate > 0 ? 'text-green' : 'text-red'}">${rate > 0 ? rate.toFixed(1) + '%' : 'なし'}</td>
+                <td class="legacy-p-2 text-end font-monospace ${cut > 0 ? 'text-green' : 'text-secondary'}">${cut > 0 ? ddNum(cut) : '-'}</td>
+                <td class="legacy-p-2 text-end font-monospace ${p.absorbed > 0 ? 'text-cyan' : 'text-secondary'}">${p.absorbed > 0 ? ddNum(p.absorbed) : '-'}</td>
+                <td class="legacy-p-2 text-end font-monospace text-orange fw-bold">${ddNum(p.hit)}</td>
+                <td class="legacy-p-2 text-end font-monospace text-secondary">${ddNum(p.hpLost)}${p.overkill > 0 ? ` <span class="text-red">/ ${ddNum(p.overkill)}☠</span>` : ''}</td>
             </tr>`;
     }
     if (players.length === 0) {
-        html += `<tr><td colspan="7" class="p-4 text-center text-gray-500">被弾者データがありません</td></tr>`;
+        html += `<tr><td colspan="7" class="legacy-p-4 text-center text-secondary">被弾者データがありません</td></tr>`;
     }
     html += `</tbody></table></div>`;
 
-    html += `<div class="text-[11px] text-gray-600 leading-relaxed border-t border-gray-700 pt-2">
+    html += `<div class="text-base text-secondary legacy-leading-relaxed legacy-border-t border-secondary legacy-pt-2">
         ※ 素のダメージ・軽減率合計・バリア吸収・実被弾はすべてFFLogsの実測値。
         軽減スキルごとの「軽減量」だけは軽減率テーブルからの推定で、軽減は乗算で重なるため軽減率の高い順に按分している（合計は実測に一致するよう差分行で調整）。
         同名の軽減（リプライザル・牽制・ランパート等）は何人が使っても重複しないため、1つぶんだけ計上している。

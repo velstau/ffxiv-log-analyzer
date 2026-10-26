@@ -6,7 +6,9 @@ FFLogs のログを読み解くための Web ツール集。FFLogs API v2（Grap
 - PHP 8.2 / Laravel 12 / Blade（ビルド不要のインラインJS + Chart.js）
 - FFLogs API v2（client credentials / GraphQL）
 - コーディング規約: PER Coding Style (PER-CS) / 静的検査は Laravel Pint
-- ビルド工程なし（npm 不要）。フロントは CDN の Tailwind とインラインJSのみ
+- ビルド工程なし（npm 不要）。フロントはローカル配置のTabler 1.7.1（Bootstrap同梱）と既存JavaScript / Chart.js。ダークモードを基本とする
+
+UIの共通ルール・変更範囲・ブラウザ検証は **[docs/UI-DESIGN-SYSTEM.md](docs/UI-DESIGN-SYSTEM.md)** を参照。
 
 設計の詳細・ファイル間の連動仕様は **[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)** を参照。
 
@@ -27,6 +29,12 @@ FFLogs のログを読み解くための Web ツール集。FFLogs API v2（Grap
 php artisan fflogs:warm-pool 1085          # エンカウンターIDを指定
 php artisan fflogs:warm-pool --zone=76     # ゾーン内の全ボス
 ```
+
+## 軽減・バリア結果のURL共有
+
+解析結果の「URLで共有」から、APIキー不要の共有画面を作成できる。有効期間30日。
+作成時のブラウザで共有停止可能。プレイヤー名などの詳細も共有される。
+操作・保存先・運用・検証は **[docs/TIMELINE-SHARING.md](docs/TIMELINE-SHARING.md)** を参照。
 
 ## セットアップ
 

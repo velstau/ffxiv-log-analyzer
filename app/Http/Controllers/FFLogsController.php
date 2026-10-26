@@ -6,6 +6,7 @@ use App\Exceptions\FFLogsRequestFailed;
 use App\Services\FFLogsService;
 use App\Services\ReportComparer;
 use App\Services\TimelineBuilder;
+use App\Services\TimelineShareStore;
 use Illuminate\Http\Request;
 
 class FFLogsController extends Controller
@@ -41,7 +42,16 @@ class FFLogsController extends Controller
             return back()->with('error', $e->getMessage())->withInput();
         }
 
-        return view('fflogs.timeline', $data);
+        try {
+            $draft = app(TimelineShareStore::class)->draft($data, TimelineShareController::owner($request));
+            // Post/Redirect/Get: reloading the result must not repeat FFLogs API calls.
+            return redirect()->route('timeline-results.show', $draft, 303)->header('Cache-Control', 'private, no-store');
+        } catch (\RuntimeException $e) {
+            // A sharing storage outage must not discard a successful analysis.
+            $data['sharePreparationFailed'] = true;
+            \Illuminate\Support\Facades\Log::warning('Timeline sharing preparation failed.');
+        }
+        return response()->view('fflogs.timeline', $data)->header('Cache-Control', 'private, no-store');
     }
 
     // ===================== A/B比較ページ =====================

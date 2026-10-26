@@ -16,3 +16,5 @@ use Illuminate\Support\Facades\Schedule;
 | Schedule::command('fflogs:warm-pool 1085')->hourly();
 |
 */
+
+Schedule::command('timeline-shares:prune')->daily();

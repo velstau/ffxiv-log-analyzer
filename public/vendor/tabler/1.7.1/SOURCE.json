@@ -1,0 +1,35 @@
+{
+  "tabler": "1.7.1",
+  "tablerSource": "https://cdn.jsdelivr.net/npm/@tabler/core@1.7.1/dist/",
+  "icons": {
+    "package": "@tabler/icons",
+    "version": "3.49.0",
+    "source": "https://cdn.jsdelivr.net/npm/@tabler/icons@3.49.0/icons/outline/",
+    "icons": [
+      "search",
+      "filter",
+      "map-pin",
+      "calendar",
+      "language",
+      "arrows-sort",
+      "files",
+      "shield",
+      "heart",
+      "sword",
+      "flag",
+      "tag",
+      "users",
+      "clock",
+      "user-circle",
+      "message-circle",
+      "thumb-up",
+      "world",
+      "list-details",
+      "layout-cards"
+    ]
+  },
+  "sha256": {
+    "tabler.min.css": "dcf84d7b4319c29ab33450bfe2a7bbf607458d994ef71023f7509e912cafdbd5",
+    "tabler.min.js": "2a3b9ecae44d821b21ba4521da33fca1bdc692454745536418c4e078e8ba6abf"
+  }
+}

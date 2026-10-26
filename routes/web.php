@@ -4,6 +4,7 @@ use App\Http\Controllers\ApiKeyController;
 use App\Http\Controllers\FFLogsController;
 use App\Http\Controllers\IconController;
 use App\Http\Controllers\PartySearchController;
+use App\Http\Controllers\TimelineShareController;
 use Illuminate\Support\Facades\Route;
 
 // TOPは目次。各ツールはそれぞれの入口ページを持つ。
@@ -34,3 +35,11 @@ Route::post('/api-key/delete', [ApiKeyController::class, 'destroy'])->name('api_
 // ローカルアイコン配信（静的ファイルが無い場合のみ初回ダウンロードして永続保存。以降はnginxが直接配信）
 Route::get('/icons/abilities/{file}', [IconController::class, 'abilityIcon'])->where('file', '[0-9\-]+\.png');
 Route::get('/icons/jobs/{file}', [IconController::class, 'jobIcon'])->where('file', '[a-z0-9]+\.png');
+
+// Saved analysis: readers never need FFLogs credentials or trigger a new API request.
+Route::post('/timeline-shares', [TimelineShareController::class, 'store'])->middleware('throttle:10,1')->name('timeline-shares.store');
+Route::get('/shared/{id}', [TimelineShareController::class, 'show'])->where('id', '[A-Za-z0-9]{48}')->name('timeline-shares.show');
+Route::post('/shared/{id}/delete', [TimelineShareController::class, 'destroy'])->where('id', '[A-Za-z0-9]{48}')->name('timeline-shares.destroy');
+
+// Private two-hour result: reloads use the server snapshot, never FFLogs.
+Route::get('/results/{id}', [TimelineShareController::class, 'result'])->where('id', '[A-Za-z0-9]{48}')->name('timeline-results.show');

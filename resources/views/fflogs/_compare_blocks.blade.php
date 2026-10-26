@@ -21,8 +21,8 @@
         return number_format((int) round($n));
     };
     $diffSpan = function ($d) use ($fmt) {
-        $cls = $d > 0 ? 'text-rose-300' : ($d < 0 ? 'text-blue-300' : 'text-gray-400');
-        return '<span class="' . $cls . ' font-mono">' . ($d > 0 ? '+' : '') . $fmt($d) . '</span>';
+        $cls = $d > 0 ? 'text-red' : ($d < 0 ? 'text-blue' : 'text-secondary');
+        return '<span class="' . $cls . ' font-monospace">' . ($d > 0 ? '+' : '') . $fmt($d) . '</span>';
     };
 
     // バー共通スケール（窓内の最大rDPS。想定rDPSのゴースト延長も収まるように含める）
@@ -46,16 +46,16 @@
 @endphp
     {{-- DPS不足側へのルールベース・アドバイス --}}
         @if ($adv)
-        <div class="advice mb-2 {{ $adv['low'] === 'A' ? 'low-a' : ($adv['low'] === 'B' ? 'low-b' : 'even') }}">
+        <div class="advice legacy-mb-2 {{ $adv['low'] === 'A' ? 'low-a' : ($adv['low'] === 'B' ? 'low-b' : 'even') }}">
             @if ($adv['low'])
-                <div class="text-sm font-bold {{ $adv['low'] === 'A' ? 'text-blue-300' : 'text-rose-300' }}">
+                <div class="text-base fw-bold {{ $adv['low'] === 'A' ? 'text-blue' : 'text-red' }}">
                     🔎 {{ $scope }}の不足側：{{ $adv['low'] }} パーティ（-{{ $fmt($adv['gap']) }} rDPS ／ {{ number_format($adv['gapPct'], 1) }}%差）
                 </div>
                 <ul>
                     @foreach ($adv['tips'] as $tip)<li>{{ $tip }}</li>@endforeach
                 </ul>
             @else
-                <div class="text-sm text-gray-300">🤝 ほぼ互角（差 {{ number_format($adv['gapPct'], 1) }}%）。決定的なパーティDPS差はなし。</div>
+                <div class="text-base text-body">🤝 ほぼ互角（差 {{ number_format($adv['gapPct'], 1) }}%）。決定的なパーティDPS差はなし。</div>
             @endif
         </div>
     @endif
@@ -74,7 +74,7 @@
             }
         }
     @endphp
-    <div class="text-xs font-bold text-gray-300 mb-1">🧩 ロールペア別 合計rDPS（タンク／ヒーラー／近接／遠隔=レンジ+キャスター）</div>
+    <div class="text-base fw-bold text-body legacy-mb-1">🧩 ロールペア別 合計rDPS（タンク／ヒーラー／近接／遠隔=レンジ+キャスター）</div>
     <div class="role-strip">
         @foreach ($roleGroups as $g => $glabel)
             @php
@@ -84,21 +84,21 @@
                 $rp = ($rb['pot'] ?? 0) - ($ra['pot'] ?? 0);
             @endphp
             <div class="role-cell">
-                <div class="text-xs text-gray-400 font-bold">{{ $glabel }}</div>
-                <div class="text-xs"><span class="text-blue-300 font-mono">{{ $ra ? $fmt($ra['rdps']) : '—' }}</span><span class="text-gray-600"> vs </span><span class="text-rose-300 font-mono">{{ $rb ? $fmt($rb['rdps']) : '—' }}</span></div>
+                <div class="text-base text-secondary fw-bold">{{ $glabel }}</div>
+                <div class="text-base"><span class="text-blue font-monospace">{{ $ra ? $fmt($ra['rdps']) : '—' }}</span><span class="text-secondary"> vs </span><span class="text-red font-monospace">{{ $rb ? $fmt($rb['rdps']) : '—' }}</span></div>
                 @if ($ra && $rb)
-                    <div class="text-xs" style="white-space: nowrap;"><span class="dlab">実際</span>{!! $diffSpan($rd) !!}　<span class="pot-diff" title="想定rDPS同士の差 B−A"><span class="dlab">想定</span>{!! $diffSpan($rp) !!}</span></div>
+                    <div class="text-base" style="white-space: nowrap;"><span class="dlab">実際</span>{!! $diffSpan($rd) !!}　<span class="pot-diff" title="想定rDPS同士の差 B−A"><span class="dlab">想定</span>{!! $diffSpan($rp) !!}</span></div>
                 @endif
             </div>
         @endforeach
     </div>
 
     {{-- 個人別（ミラー型バー：A左/青・B右/赤、長い方が優勢。rDPS基準。ジョブ名はフルネーム両側表示） --}}
-    <div class="cmp-head text-xs text-gray-400 pb-1 mb-1 border-b border-gray-700">
-        <div class="text-right text-blue-300">A</div>
-        <div class="text-gray-500" style="grid-column: span 2; text-align:center;">バー長＝rDPS（長い方が優勢）／バー上の数値＝総ダメージ／斜線内＝想定総ダメージ</div>
-        <div class="text-left text-rose-300">B</div>
-        <div class="text-right">差 B−A</div>
+    <div class="cmp-head text-base text-secondary legacy-pb-1 legacy-mb-1 legacy-border-b border-secondary">
+        <div class="text-end text-blue">A</div>
+        <div class="text-secondary" style="grid-column: span 2; text-align:center;">バー長＝rDPS（長い方が優勢）／バー上の数値＝総ダメージ／斜線内＝想定総ダメージ</div>
+        <div class="text-start text-red">B</div>
+        <div class="text-end">差 B−A</div>
     </div>
 
     @foreach ($rows as $r)
@@ -124,18 +124,18 @@
             <div class="a-info">
                 @if ($a)
                     <div class="nm">@if ($aHasPot)<span class="pot" title="{{ $potTitle($a) }}">▶{{ $fmt($apot) }}</span> @endif<span style="color: {{ $a['color'] }};">{{ $a['name'] }}</span>
-                        <span class="text-gray-500" title="Active {{ $a['activePct'] }}%">({{ round($a['activePct']) }}%)</span>
-                        @if ($a['iconFile'])<img class="jobicon ml-1" src="{{ asset('icons') }}/jobs/{{ $a['iconFile'] }}.png" onerror="this.style.display='none'">@endif
+                        <span class="text-secondary" title="Active {{ $a['activePct'] }}%">({{ round($a['activePct']) }}%)</span>
+                        @if ($a['iconFile'])<img class="jobicon legacy-ml-1" src="{{ asset('icons') }}/jobs/{{ $a['iconFile'] }}.png" onerror="this.style.display='none'">@endif
                     </div>
                     <div class="stat">
                         @if (!empty($a['potion']) || !empty($a['deaths']) || ($a['ddSec'] ?? 0) >= 1)
                             <span class="badges">@if (!empty($a['potion']))<img class="potion" src="{{ asset('icons') }}/abilities/{{ $a['potionIcon'] ?? '' }}" title="薬使用" onerror="this.style.display='none'">@endif @if (!empty($a['deaths']))<span class="skull" title="{{ $scope }}で死亡{{ $a['deaths'] }}回">💀@if ($a['deaths'] > 1)<span class="sec">×{{ $a['deaths'] }}</span>@endif</span>@endif @if (($a['ddSec'] ?? 0) >= 1)<span title="ダメージ低下デバフ {{ round($a['ddSec']) }}秒">@if (!empty($a['ddIcon']))<img class="potion" src="{{ asset('icons') }}/abilities/{{ $a['ddIcon'] }}" onerror="this.style.display='none'">@endif<span class="sec">{{ round($a['ddSec']) }}s</span></span>@endif</span>
                         @endif
                         <span class="sub">D{{ $fmt($a['dps']) }}/a{{ $fmt($a['adps']) }}</span>
-                        <span class="rd {{ $d < 0 ? 'text-blue-300' : 'text-white' }}">{{ $fmt($a['rdps']) }}</span>
+                        <span class="rd {{ $d < 0 ? 'text-blue' : 'text-white' }}">{{ $fmt($a['rdps']) }}</span>
                     </div>
                 @else
-                    <span class="text-gray-600">—</span>
+                    <span class="text-secondary">—</span>
                 @endif
             </div>
             <div class="bwrap a">@if ($agw > 0)@if ($agw < 14)<span class="gnum" title="{{ $potTitle($a) }}">{{ $fmtAmt($a['potentialTotal'] ?? 0) }}</span>@endif<div class="bar-ghost a" style="width: {{ $agw }}%" title="{{ $potTitle($a) }}">@if ($agw >= 14)▶{{ $fmtAmt($a['potentialTotal'] ?? 0) }}@endif</div>@endif<div class="bar-h a" style="width: {{ $aw }}%">@if ($a){{ $fmtAmt($a['total']) }}@endif</div></div>
@@ -143,29 +143,29 @@
             {{-- B：職アイコン＋フルネーム(Active%) / rDPS・DPS・aDPS --}}
             <div class="b-info">
                 @if ($b)
-                    <div class="nm">@if ($b['iconFile'])<img class="jobicon mr-1" src="{{ asset('icons') }}/jobs/{{ $b['iconFile'] }}.png" onerror="this.style.display='none'">@endif<span style="color: {{ $b['color'] }};">{{ $b['name'] }}</span>
-                        <span class="text-gray-500" title="Active {{ $b['activePct'] }}%">({{ round($b['activePct']) }}%)</span>@if ($bHasPot) <span class="pot" title="{{ $potTitle($b) }}">▶{{ $fmt($bpot) }}</span>@endif
+                    <div class="nm">@if ($b['iconFile'])<img class="jobicon legacy-mr-1" src="{{ asset('icons') }}/jobs/{{ $b['iconFile'] }}.png" onerror="this.style.display='none'">@endif<span style="color: {{ $b['color'] }};">{{ $b['name'] }}</span>
+                        <span class="text-secondary" title="Active {{ $b['activePct'] }}%">({{ round($b['activePct']) }}%)</span>@if ($bHasPot) <span class="pot" title="{{ $potTitle($b) }}">▶{{ $fmt($bpot) }}</span>@endif
                     </div>
                     <div class="stat">
-                        <span class="rd {{ $d > 0 ? 'text-rose-300' : 'text-white' }}">{{ $fmt($b['rdps']) }}</span>
+                        <span class="rd {{ $d > 0 ? 'text-red' : 'text-white' }}">{{ $fmt($b['rdps']) }}</span>
                         <span class="sub">D{{ $fmt($b['dps']) }}/a{{ $fmt($b['adps']) }}</span>
                         @if (!empty($b['potion']) || !empty($b['deaths']) || ($b['ddSec'] ?? 0) >= 1)
                             <span class="badges">@if (!empty($b['potion']))<img class="potion" src="{{ asset('icons') }}/abilities/{{ $b['potionIcon'] ?? '' }}" title="薬使用" onerror="this.style.display='none'">@endif @if (!empty($b['deaths']))<span class="skull" title="{{ $scope }}で死亡{{ $b['deaths'] }}回">💀@if ($b['deaths'] > 1)<span class="sec">×{{ $b['deaths'] }}</span>@endif</span>@endif @if (($b['ddSec'] ?? 0) >= 1)<span title="ダメージ低下デバフ {{ round($b['ddSec']) }}秒">@if (!empty($b['ddIcon']))<img class="potion" src="{{ asset('icons') }}/abilities/{{ $b['ddIcon'] }}" onerror="this.style.display='none'">@endif<span class="sec">{{ round($b['ddSec']) }}s</span></span>@endif</span>
                         @endif
                     </div>
                 @else
-                    <span class="text-gray-600">—</span>
+                    <span class="text-secondary">—</span>
                 @endif
             </div>
             {{-- 差（1行目＝実際差、2行目＝想定差。同ロール対戦の≈は同じ行に付ける） --}}
-            <div class="text-right text-sm" @if (!empty($r['role'])) title="ロール比較" @endif>
+            <div class="text-end text-base" @if (!empty($r['role'])) title="ロール比較" @endif>
                 @if ($hasBoth)
-                    <div style="white-space: nowrap;"><span class="dlab">実際</span>{!! $diffSpan($d) !!}@if (!empty($r['role']))<span class="text-amber-300 text-xs">≈</span>@endif</div>
+                    <div style="white-space: nowrap;"><span class="dlab">実際</span>{!! $diffSpan($d) !!}@if (!empty($r['role']))<span class="text-yellow text-base">≈</span>@endif</div>
                     @if ($aHasPot || $bHasPot)
                         @php $dp = ($b['potentialRdps'] ?? $b['rdps']) - ($a['potentialRdps'] ?? $a['rdps']); @endphp
                         <div title="想定rDPS（死亡・衰弱・ダメ低下が無い場合）同士の差 B−A" style="white-space: nowrap;"><span class="pot-diff"><span class="dlab">想定</span>{!! $diffSpan($dp) !!}</span></div>
                     @endif
-                @else<span class="text-gray-600">—</span>@endif
+                @else<span class="text-secondary">—</span>@endif
             </div>
         </div>
     @endforeach

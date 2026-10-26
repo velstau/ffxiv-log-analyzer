@@ -49,10 +49,7 @@ td {
     /* gray-600 */
 }
 
-/* Reset default outlines */
-*:focus {
-    outline: none;
-}
+/* Focus indicators are supplied by logs-ui.css. */
 
 /* ===== パフォーマンス最適化 ===== */
 /* 画面外の行はブラウザがレンダリングをスキップする（長大なテーブルの描画を軽量化）。
@@ -193,20 +190,20 @@ tbody tr {
     opacity: 0.85;
 }
 
-/* アクティブ（被弾軽減）／効果中／使用：すべて同じ青の塗りボックス＋白チェックに統一 */
+/* アクティブ（被弾軽減）／効果中：青の塗りボックス＋白チェック */
 .mit-on::before,
-.mit-up::before,
-.mit-used::before {
+.mit-up::before {
     background: #2563eb;
     /* blue-600 */
     border: 1px solid #93c5fd;
     box-shadow: 0 0 4px rgba(59, 130, 246, 0.8);
 }
 
-/* 使用マーカーのみ：チェックは同じだが、使った瞬間だと分かるよう枠を白く・光彩を強める */
+/* 使用した瞬間：緑の箱＋白チェック。光彩に頼らず、赤のバリア破壊と区別する。 */
 .mit-used::before {
-    border: 1px solid #ffffff;
-    box-shadow: 0 0 7px rgba(147, 197, 253, 1);
+    background: var(--tblr-green, #2fb344);
+    border: 1px solid var(--tblr-green, #2fb344);
+    box-shadow: none;
 }
 
 /* バリア破壊：塗りつぶしの箱（赤） */
