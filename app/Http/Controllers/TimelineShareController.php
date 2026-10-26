@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Exceptions\TimelineShareLimitReached;
 use App\Services\TimelineShareStore;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
@@ -30,6 +31,8 @@ class TimelineShareController extends Controller
         $validated = $request->validate(['draft' => ['required', 'string', 'regex:/\A[A-Za-z0-9]{48}\z/']]);
         try {
             $share = $shares->publish($validated['draft'], (string) $request->session()->get('timeline_share_owner', ''));
+        } catch (TimelineShareLimitReached $e) {
+            return response()->json(['message' => $e->getMessage()], 429);
         } catch (\RuntimeException $e) {
             return response()->json(['message' => '共有結果を保存できませんでした。時間をおいて再度お試しください。'], 503);
         }

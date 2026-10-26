@@ -145,4 +145,51 @@ class TimelineShareTest extends TestCase
         $this->get($second['url'])->assertOk();
         $this->assertCount(1, Storage::disk('local')->files('timeline-shares'));
     }
+
+    #[Test]
+    public function the_same_draft_returns_the_same_share_instead_of_a_new_file(): void
+    {
+        $store = app(TimelineShareStore::class);
+        $draft = $store->draft(UiData::timeline(), 'creator');
+        $session = $this->withSession(['timeline_share_owner' => 'creator']);
+        $first = $session->postJson(route('timeline-shares.store'), ['draft' => $draft])->assertOk()->json('url');
+        $this->assertSame($first, $session->postJson(route('timeline-shares.store'), ['draft' => $draft])->assertOk()->json('url'));
+        $this->assertCount(1, Storage::disk('local')->files('timeline-shares'));
+
+        // 停止したあとは同じ解析結果から作り直せる
+        $session->post(route('timeline-shares.destroy', basename($first)))->assertOk();
+        $this->assertEmpty(Storage::disk('local')->files('timeline-shares/meta'));
+        $this->assertNotSame($first, $session->postJson(route('timeline-shares.store'), ['draft' => $draft])->assertOk()->json('url'));
+    }
+
+    #[Test]
+    public function each_browser_can_keep_up_to_ten_active_shares(): void
+    {
+        $store = app(TimelineShareStore::class);
+        for ($i = 0; $i < TimelineShareStore::MAX_PER_OWNER; $i++) {
+            $last = $store->publish($store->draft(UiData::timeline(), 'creator'), 'creator');
+        }
+        $draft = $store->draft(UiData::timeline(), 'creator');
+        $this->withSession(['timeline_share_owner' => 'creator'])->postJson(route('timeline-shares.store'), ['draft' => $draft])
+            ->assertStatus(429)->assertJsonPath('message', fn($message) => str_contains($message, '10件まで'));
+        $this->assertNotNull($store->publish($store->draft(UiData::timeline(), 'other'), 'other'));
+
+        // 1件停止するか期限が切れれば、また作れる
+        $store->delete($last['id']);
+        $this->assertNotNull($store->publish($draft, 'creator'));
+        $this->travel(30)->days();
+        $this->assertNotNull($store->publish($store->draft(UiData::timeline(), 'creator'), 'creator'));
+    }
+
+    #[Test]
+    public function no_new_share_is_saved_when_the_total_limit_is_reached(): void
+    {
+        for ($i = 0; $i < TimelineShareStore::MAX_TOTAL; $i++) {
+            Storage::disk('local')->put('timeline-shares/' . sprintf('%048d', $i) . '.enc', 'x');
+        }
+        $draft = app(TimelineShareStore::class)->draft(UiData::timeline(), 'creator');
+        $this->withSession(['timeline_share_owner' => 'creator'])->postJson(route('timeline-shares.store'), ['draft' => $draft])
+            ->assertStatus(429)->assertJsonPath('message', fn($message) => str_contains($message, '上限'));
+        $this->assertCount(TimelineShareStore::MAX_TOTAL, Storage::disk('local')->files('timeline-shares'));
+    }
 }

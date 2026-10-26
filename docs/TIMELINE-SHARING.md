@@ -97,3 +97,12 @@ python3 tests/Browser/share_smoke.py http://172.24.0.2:8101/ff14tools/logs2timel
 - 回帰テスト: `UiPageTest::timeline_onclick_arguments_cannot_break_out_of_js_strings`（修正前の版で失敗することを確認）。
 - 検証：PHP全59テスト/1,818 assertions、Pint全47ファイル、ui_smoke・share_smoke（1440/390/320px、JSエラーなし）。
 - 細工した名前をFFLogsのログに入れられるかは未確認。本番反映は未実施。
+
+## 共有の件数の上限（2026-10-26）
+
+- 1つのブラウザ（セッションの作成者）で有効な共有は10件まで。全体では500件まで（ディスク保護）。超えると429で理由を表示する。
+- 同じ解析結果（draft）からは同じ共有URLを返し、ファイルを増やさない。停止後は作り直せる。
+- 件数は `timeline-shares/meta/{id}.json`（作成者のハッシュ・draftのハッシュ・期限だけ）で数える。期限切れ・停止・掃除で一緒に消える。
+  この索引がない10-26以前の共有は、作成者ごとの件数に入らない（全体の件数には入る）。
+- 同時に送信された場合の排他はしていない（作成は1分10回の制限つき。超過は最大でも数件）。
+- 検証：PHP全62テスト/1,834 assertions、Pint全48ファイル。

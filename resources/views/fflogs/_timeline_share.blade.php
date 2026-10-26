@@ -6,7 +6,7 @@
             <p>相手のAPIキーは不要です。共有時点の解析結果を表示します。</p>
             <div class="alert alert-info">URLを知っている人は、プレイヤー名・シナジー・死因などの詳細も閲覧できます。APIキーは共有されません。</div>
             @csrf
-            <p>有効期間：作成から30日。作成したブラウザで共有URLを開くと、共有を停止できます（ブラウザのセッションが有効な間）。</p>
+            <p>有効期間：作成から30日。1つのブラウザで有効な共有は{{ \App\Services\TimelineShareStore::MAX_PER_OWNER }}件まで。作成したブラウザで共有URLを開くと、共有を停止できます（ブラウザのセッションが有効な間）。</p>
             <div id="timeline-share-error" class="alert alert-danger" role="alert" hidden></div>
             <div id="timeline-share-result" @if (!($isShared ?? false)) hidden @endif>
                 <label class="form-label" for="timeline-share-url">共有URL</label>

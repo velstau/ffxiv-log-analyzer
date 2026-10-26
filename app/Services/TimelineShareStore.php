@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Exceptions\TimelineShareLimitReached;
 use Illuminate\Contracts\Encryption\DecryptException;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Cache;
@@ -15,6 +16,9 @@ use RuntimeException;
 class TimelineShareStore
 {
     public const DAYS = 30;
+    public const MAX_PER_OWNER = 10;
+    public const MAX_TOTAL = 500;
+    private const META = 'timeline-shares/meta/';
     private const KEYS = ['fight', 'events', 'playerColumns', 'mitigationColumns', 'mitigationGroups', 'mitigationGroupIcons', 'playerDetails', 'playerTimelines', 'start_time', 'synergyWindows', 'deaths', 'hasPhases'];
 
     public function draft(array $data, string $owner): string
@@ -41,13 +45,51 @@ class TimelineShareStore
         if (!$data) {
             return null;
         }
+        // 同じ解析結果からは同じ共有を返す（作り直しでファイルを増やさない）
+        $draftKey = hash('sha256', $draft);
+        $owned = array_filter($this->activeMeta(), fn($meta) => $meta['owner'] === $data['owner']);
+        foreach ($owned as $existing => $meta) {
+            if ($meta['draft'] === $draftKey) {
+                return ['id' => $existing, 'expires_at' => $meta['expires_at']];
+            }
+        }
+        if (count($owned) >= self::MAX_PER_OWNER) {
+            throw TimelineShareLimitReached::perOwner(self::MAX_PER_OWNER);
+        }
+        if (count(Storage::disk('local')->files('timeline-shares')) >= self::MAX_TOTAL) {
+            throw TimelineShareLimitReached::total();
+        }
         $id = Str::random(48);
         $snapshot = ['version' => 1, 'owner' => $data['owner'], 'created_at' => now()->toIso8601String(), 'expires_at' => now()->addDays(self::DAYS)->toIso8601String(), 'data' => $data['data']];
         $encrypted = Crypt::encryptString(json_encode($snapshot, JSON_THROW_ON_ERROR));
         if (!Storage::disk('local')->put('timeline-shares/' . $id . '.enc', $encrypted)) {
             throw new RuntimeException('Could not save shared timeline.');
         }
+        // 件数を数えるための索引。作成者は乱数のハッシュだけで、結果の中身は入れない
+        $meta = ['owner' => $data['owner'], 'draft' => $draftKey, 'expires_at' => $snapshot['expires_at']];
+        Storage::disk('local')->put(self::META . $id . '.json', json_encode($meta, JSON_THROW_ON_ERROR));
         return ['id' => $id, 'expires_at' => $snapshot['expires_at']];
+    }
+
+    /** 有効な共有の索引（id => meta）。期限切れや本体のない索引はここで消す。 */
+    private function activeMeta(): array
+    {
+        $disk = Storage::disk('local');
+        $active = [];
+        foreach ($disk->files(rtrim(self::META, '/')) as $path) {
+            if (!preg_match('#/([A-Za-z0-9]{48})\.json$#', $path, $match)) {
+                continue;
+            }
+            $meta = json_decode((string) $disk->get($path), true);
+            if (!is_array($meta) || !isset($meta['owner'], $meta['draft'], $meta['expires_at'])
+                || now()->greaterThanOrEqualTo($meta['expires_at'])
+                || !$disk->exists('timeline-shares/' . $match[1] . '.enc')) {
+                $disk->delete($path);
+                continue;
+            }
+            $active[$match[1]] = $meta;
+        }
+        return $active;
     }
 
     public function find(string $id): ?array
@@ -66,7 +108,7 @@ class TimelineShareStore
                 return null;
             }
             if (now()->greaterThanOrEqualTo($snapshot['expires_at'])) {
-                Storage::disk('local')->delete($path);
+                Storage::disk('local')->delete([$path, self::META . $id . '.json']);
                 return null;
             }
             return $snapshot;
@@ -82,6 +124,7 @@ class TimelineShareStore
 
     public function delete(string $id): bool
     {
+        Storage::disk('local')->delete(self::META . $id . '.json');
         return Storage::disk('local')->delete('timeline-shares/' . $id . '.enc');
     }
 
@@ -98,6 +141,7 @@ class TimelineShareStore
                 }
             }
         }
+        $this->activeMeta(); // 本体の消えた索引を片付ける
         return $count;
     }
 }
