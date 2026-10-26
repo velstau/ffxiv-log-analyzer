@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Services\FFLogsService;
 use App\Services\ReportComparer;
 use App\Support\FFLogsCredentialStore;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Storage;
@@ -104,6 +105,16 @@ class CompareShareTest extends TestCase
         $tips = implode("\n", $comparer->buildPhaseAdvice($a, $b)['tips']);
         $this->assertStringContainsString('PT:AのSCHが相手より', $tips);
         $this->assertStringNotContainsString('Real Name', $tips);
+    }
+
+    #[Test]
+    public function a_failed_roster_cache_write_does_not_break_the_comparison(): void
+    {
+        Cache::shouldReceive('get')->andReturn(null);
+        Cache::shouldReceive('remember')->andReturn(['friendlyPlayers' => [1]]);
+        Cache::shouldReceive('put')->andThrow(new \RuntimeException('disk full'));
+        $this->mock(FFLogsService::class, fn($mock) => $mock->shouldReceive('getMasterData')->andReturn(['actors' => [['id' => 1, 'name' => 'Real Name', 'type' => 'Player', 'subType' => 'Scholar']]]));
+        $this->assertSame(['Real Name'], array_keys(app(ReportComparer::class)->roster('Code', 1)));
     }
 
     #[Test]

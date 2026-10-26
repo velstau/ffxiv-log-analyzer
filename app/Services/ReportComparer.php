@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Support\MitigationSpec;
 use App\Support\TimelineJobMeta;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Log;
 
 /**
  * 同じボスの2つのログを突き合わせて、フェーズ別・分別に火力とローテーションの差を出す。
@@ -515,7 +516,7 @@ class ReportComparer
         // 範囲指定の再集計でも同じ別名を付けられるよう、参加者の表を残しておく
         $roster = $this->rosterOf($fight, $master);
         if ($roster) {
-            Cache::put("fflogs:roster:{$code}:{$fightId}", $roster, 1800);
+            $this->putRoster($code, $fightId, $roster);
         }
 
         return [
@@ -542,9 +543,19 @@ class ReportComparer
         $fight = Cache::remember("fflogs:fight:{$code}:{$fightId}", 1800, fn() => $this->fflogs->getFightDetails($code, $fightId));
         $roster = $fight ? $this->rosterOf($fight, $this->fflogs->getMasterData($code)) : [];
         if ($roster) {
-            Cache::put("fflogs:roster:{$code}:{$fightId}", $roster, 1800);
+            $this->putRoster($code, $fightId, $roster);
         }
         return $roster;
+    }
+
+    /** 書き込みに失敗しても比較は続ける（キャッシュは高速化のためのもの。FFLogsService::cachePut と同じ方針） */
+    private function putRoster(string $code, int $fightId, array $roster): void
+    {
+        try {
+            Cache::put("fflogs:roster:{$code}:{$fightId}", $roster, 1800);
+        } catch (\Throwable $e) {
+            Log::warning("Cache write failed (fflogs:roster:{$code}:{$fightId}): " . $e->getMessage());
+        }
     }
 
     private function rosterOf(array $fight, ?array $master): array
