@@ -24,38 +24,7 @@
 <script src="https://cdn.jsdelivr.net/npm/modern-screenshot@4.7.0/dist/index.js"></script>
 <script src="{{ asset('js/timeline.js') }}?v={{ filemtime(public_path('js/timeline.js')) }}"></script>
 
-    <header class="timeline-toolbar border-bottom">
-        <div class="analysis-topline">
-            <div class="analysis-summary"><h1 class="h3 m-0">Timeline: {{ $fight['name'] }}</h1><div class="text-secondary mt-1">戦闘時間 <strong>{{ gmdate('i:s', ($fight['endTime'] - $fight['startTime']) / 1000) }}</strong></div></div>
-            <div class="analysis-actions">
-                @if ($cachedResult ?? false)<span class="text-secondary" title="解析結果は2時間一時保存されます。再読み込みではAPIを呼び出しません。">結果を一時保存中（2時間）</span>@endif
-                @if ($isShared ?? false)<span class="badge bg-blue-lt" title="有効期限：{{ $shareExpiresAt }}">共有結果（APIキー不要）</span>@endif
-                <div class="analysis-action-group" role="group" aria-label="表示操作"><span class="text-secondary">表示</span>
-                    <button type="button" id="toggle-players" class="btn btn-outline-primary active" aria-pressed="true" onclick="togglePlayers()" title="Toggle Players"><x-ui-icon name="users" />プレイヤー列</button>
-                    <button type="button" class="btn" onclick="openActionFilterModal()" title="Filter Actions"><x-ui-icon name="filter" />技フィルター</button>
-                    <button type="button" class="btn" data-bs-toggle="modal" data-bs-target="#timeline-legend"><x-ui-icon name="list-details" />凡例</button>
-                </div>
-                <div class="analysis-action-group" role="group" aria-label="出力操作"><span class="text-secondary">出力</span>
-                    <button type="button" class="btn btn-primary" onclick="downloadHojoringXML()" title="Export XML"><x-ui-icon name="files" />XML出力</button>
-                </div>
-                @if (($shareDraft ?? false) || ($isShared ?? false))
-                <div class="analysis-action-group"><button type="button" class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#timeline-share">{{ ($isShared ?? false) ? '共有URL・管理' : 'URLで共有' }}</button></div>
-                @elseif ($sharePreparationFailed ?? false)
-                <span class="text-warning" role="status">共有の準備に失敗しました。結果を一時保存できないため、再読み込み時は再解析が必要です。</span>
-                @endif
-                <div class="analysis-action-group"><a class="btn btn-ghost-secondary" href="{{ route('home') }}">目次</a><a class="btn" href="{{ route('mitigation.form') }}">新しい解析</a></div>
-            </div>
-        </div>
-        <div class="analysis-tabline">
-            <div class="nav nav-tabs" role="tablist" aria-label="解析ビュー">
-                <button type="button" id="tab-btn-mitigation" onclick="switchView('mitigation')" class="nav-link active" role="tab" aria-selected="true" aria-controls="view-mitigation">🛡️ 軽減・バリア</button>
-                <button type="button" id="tab-btn-synergy" onclick="switchView('synergy')" class="nav-link" role="tab" aria-selected="false" aria-controls="view-synergy">⚔️ シナジー・バフ</button>
-                @php $totalDeaths = array_sum(array_map(fn($g) => $g['victim_count'], $deaths)); @endphp
-                <button type="button" id="tab-btn-death" onclick="switchView('death')" class="nav-link" role="tab" aria-selected="false" aria-controls="view-death">💀 デスチェッカー @if ($totalDeaths)<span class="text-red ms-1">({{ $totalDeaths }})</span>@endif</button>
-            </div>
-            <div class="timeline-state-key text-secondary"><span><i class="mit mit-on" aria-hidden="true"></i>軽減適用・効果中</span><span><i class="mit mit-cd" aria-hidden="true"></i>リキャスト中</span><span><i class="mit mit-x" aria-hidden="true"></i>バリア破壊</span></div>
-        </div>
-    </header>
+    @include('fflogs._timeline_header')
     <!-- ===== 軽減・バリア ビュー ===== -->
     <div id="view-mitigation" tabindex="0" role="tabpanel" aria-labelledby="tab-btn-mitigation" class="timeline-view legacy-flex-1 legacy-w-full overflow-auto bg-body legacy-relative">
         <table id="mitigation-table" class="legacy-w-full text-start legacy-border-separate legacy-min-w-max {{ $hasPhases ? 'has-phase' : '' }}">
