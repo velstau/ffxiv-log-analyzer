@@ -191,10 +191,9 @@ class MitigationSpecTest extends TestCase
         $this->assertSame(0.90, MitigationSpec::damageDownRate('', '', 1068));
         $this->assertSame(0.50, MitigationSpec::damageDownRate('', '', 1060));
         $this->assertTrue(MitigationSpec::damageDownRateKnown('', '', 1068));
-        // エデン零式の値は零式（difficulty 101）だけに当てはめる
-        $this->assertSame(0.39, MitigationSpec::damageDownRate('', '', 73, 101));
-        $this->assertSame(MitigationSpec::DD_REDUCTION, MitigationSpec::damageDownRate('', '', 73, 100));
-        $this->assertFalse(MitigationSpec::damageDownRateKnown('', '', 73, 100));
+        // 表にないエンカウンターは既定値で「仮定」扱い
+        $this->assertSame(MitigationSpec::DD_REDUCTION, MitigationSpec::damageDownRate('', '', 73));
+        $this->assertFalse(MitigationSpec::damageDownRateKnown('', '', 73));
         // 名前で判定する既存の分も「出典あり」として扱う
         $this->assertTrue(MitigationSpec::damageDownRateKnown('Dancing Mad'));
     }

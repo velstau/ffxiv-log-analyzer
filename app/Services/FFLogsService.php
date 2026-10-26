@@ -299,7 +299,6 @@ query($code: String!, $fightId: Int!) {
                 endTime
                 name
                 encounterID
-                difficulty
                 gameZone {
                     id
                     name

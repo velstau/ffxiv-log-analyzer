@@ -383,7 +383,7 @@ class ReportComparer
         $overall['enemies'] = $this->summarizeEnemyTable($this->fflogs->getEnemyDamageTable($code, $fightId, $st, $et))['enemies'];
 
         // このコンテンツのダメージ低下の低下率（想定ダメージ算出用。絶妖星乱舞=-90%等）
-        $ddArgs = [$fight['name'] ?? '', $fight['gameZone']['name'] ?? '', (int) ($fight['encounterID'] ?? 0), (int) ($fight['difficulty'] ?? 0)];
+        $ddArgs = [$fight['name'] ?? '', $fight['gameZone']['name'] ?? '', (int) ($fight['encounterID'] ?? 0)];
         $ddr = MitigationSpec::damageDownRate(...$ddArgs);
         $ddKnown = MitigationSpec::damageDownRateKnown(...$ddArgs);
 
@@ -707,8 +707,9 @@ class ReportComparer
                 $kind = 'weak50';
             } else {
                 $abName = $abilities->get($rawId)['name'] ?? ($abilities->get($sid)['name'] ?? '');
-                // 名前は完全一致で見る。部分一致だと予告マーカー「指定：与ダメージ低下」(692) も数えてしまう
-                if (!preg_match('/\A(ダメージ低下|Damage Down)\z/iu', trim($abName))) {
+                // 名前は完全一致で見る（物理・魔法ダメージ低下も含む）。部分一致だと予告マーカー
+                // 「指定：与ダメージ低下」(692) も数えてしまう
+                if (!preg_match('/\A((物理|魔法)?ダメージ低下|(Physical |Magic )?Damage Down)\z/iu', trim($abName))) {
                     continue;
                 }
                 $kind = 'dd';
@@ -987,7 +988,7 @@ class ReportComparer
         }
         $summary = $this->summarizeDamageTable($table, $start, $end);
 
-        $ddArgs = [$fight['name'] ?? '', $fight['gameZone']['name'] ?? '', (int) ($fight['encounterID'] ?? 0), (int) ($fight['difficulty'] ?? 0)];
+        $ddArgs = [$fight['name'] ?? '', $fight['gameZone']['name'] ?? '', (int) ($fight['encounterID'] ?? 0)];
         $ddr = MitigationSpec::damageDownRate(...$ddArgs);
         $ddKnown = MitigationSpec::damageDownRateKnown(...$ddArgs);
         // 薬の上乗せ推定は薬使用者ぶん追加問い合わせが走るので、任意範囲の再集計では省く
