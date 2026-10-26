@@ -192,4 +192,30 @@ class TimelineShareTest extends TestCase
             ->assertStatus(429)->assertJsonPath('message', fn($message) => str_contains($message, '上限'));
         $this->assertCount(TimelineShareStore::MAX_TOTAL, Storage::disk('local')->files('timeline-shares'));
     }
+
+    #[Test]
+    public function expired_shares_do_not_block_new_ones_even_without_the_daily_prune(): void
+    {
+        $disk = Storage::disk('local');
+        $share = app(TimelineShareStore::class)->publish(app(TimelineShareStore::class)->draft(UiData::timeline(), 'creator'), 'creator');
+        // 索引のない（10-26 以前の形の）共有で上限を埋める。掃除は上限に達したときに走る
+        $body = $disk->get('timeline-shares/' . $share['id'] . '.enc');
+        app(TimelineShareStore::class)->delete($share['id']);
+        for ($i = 0; $i < TimelineShareStore::MAX_TOTAL; $i++) {
+            $disk->put('timeline-shares/' . sprintf('%048d', $i) . '.enc', $body);
+        }
+        $this->travel(30)->days();
+        $this->publish();
+        $this->assertCount(1, $disk->files('timeline-shares'));
+        $this->assertCount(1, $disk->files('timeline-shares/meta'));
+    }
+
+    #[Test]
+    public function a_share_without_its_index_is_not_left_behind(): void
+    {
+        Storage::disk('local')->put('timeline-shares/meta', 'not a directory');
+        $draft = app(TimelineShareStore::class)->draft(UiData::timeline(), 'creator');
+        $this->withSession(['timeline_share_owner' => 'creator'])->postJson(route('timeline-shares.store'), ['draft' => $draft])->assertStatus(503);
+        $this->assertSame(['timeline-shares/meta'], Storage::disk('local')->files('timeline-shares'));
+    }
 }

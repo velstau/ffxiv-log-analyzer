@@ -56,8 +56,12 @@ class TimelineShareStore
         if (count($owned) >= self::MAX_PER_OWNER) {
             throw TimelineShareLimitReached::perOwner(self::MAX_PER_OWNER);
         }
+        // 上限に達したときだけ期限切れを掃除して数え直す（定期の掃除が止まっていても塞がらない）
         if (count(Storage::disk('local')->files('timeline-shares')) >= self::MAX_TOTAL) {
-            throw TimelineShareLimitReached::total();
+            $this->prune();
+            if (count(Storage::disk('local')->files('timeline-shares')) >= self::MAX_TOTAL) {
+                throw TimelineShareLimitReached::total();
+            }
         }
         $id = Str::random(48);
         $snapshot = ['version' => 1, 'owner' => $data['owner'], 'created_at' => now()->toIso8601String(), 'expires_at' => now()->addDays(self::DAYS)->toIso8601String(), 'data' => $data['data']];
@@ -67,7 +71,17 @@ class TimelineShareStore
         }
         // 件数を数えるための索引。作成者は乱数のハッシュだけで、結果の中身は入れない
         $meta = ['owner' => $data['owner'], 'draft' => $draftKey, 'expires_at' => $snapshot['expires_at']];
-        Storage::disk('local')->put(self::META . $id . '.json', json_encode($meta, JSON_THROW_ON_ERROR));
+        try {
+            // throw=false でも、フォルダを作れない失敗は例外で来る
+            $indexed = Storage::disk('local')->put(self::META . $id . '.json', json_encode($meta, JSON_THROW_ON_ERROR));
+        } catch (\Throwable $e) {
+            $indexed = false;
+        }
+        if (!$indexed) {
+            // 索引のない共有は件数にも重複判定にも入らないので、本体も残さない
+            Storage::disk('local')->delete('timeline-shares/' . $id . '.enc');
+            throw new RuntimeException('Could not index shared timeline.');
+        }
         return ['id' => $id, 'expires_at' => $snapshot['expires_at']];
     }
 
@@ -81,9 +95,12 @@ class TimelineShareStore
                 continue;
             }
             $meta = json_decode((string) $disk->get($path), true);
-            if (!is_array($meta) || !isset($meta['owner'], $meta['draft'], $meta['expires_at'])
-                || now()->greaterThanOrEqualTo($meta['expires_at'])
-                || !$disk->exists('timeline-shares/' . $match[1] . '.enc')) {
+            $body = 'timeline-shares/' . $match[1] . '.enc';
+            if (is_array($meta) && isset($meta['expires_at']) && now()->greaterThanOrEqualTo($meta['expires_at'])) {
+                $disk->delete([$path, $body]); // 索引の期限は本体と同じ
+                continue;
+            }
+            if (!is_array($meta) || !isset($meta['owner'], $meta['draft'], $meta['expires_at']) || !$disk->exists($body)) {
                 $disk->delete($path);
                 continue;
             }
