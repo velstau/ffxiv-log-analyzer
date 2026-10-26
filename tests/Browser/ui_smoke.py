@@ -87,12 +87,7 @@ with sync_playwright() as pw:
             page.locator('[onclick^="saveModalAsImage"]').click()
         download.value.save_as(OUT / f'player-phase{phase}.png')
         page.keyboard.press('Escape')
-        page.locator('[data-bs-target="#timeline-legend"]').click()
-        expect(page.locator('#timeline-legend')).to_be_visible()
-        page.wait_for_timeout(400)
-        page.keyboard.press('Escape')
-        expect(page.locator('#timeline-legend')).to_be_hidden()
-        page.wait_for_timeout(400)
+        expect(page.locator('.timeline-state-key .mit')).to_have_count(5)
     assert page.locator('[onclick="saveFullTimeline()"]').count() == 0
 
     visit('/party-search')

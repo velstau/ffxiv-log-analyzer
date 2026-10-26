@@ -699,9 +699,6 @@
     </div>
     <div class="timeline-x-controls" id="timeline-x-controls" hidden><button type="button" id="timeline-scroll-left" aria-label="表を左へスクロール">←</button><input type="range" class="form-range m-0" id="timeline-xrange" min="0" max="0" value="0" step="1" aria-label="表の横スクロール位置"><button type="button" id="timeline-scroll-right" aria-label="表を右へスクロール">→</button></div>
 
-<div class="modal fade" id="timeline-legend" tabindex="-1" aria-labelledby="legend-title"><div class="modal-dialog modal-lg modal-dialog-centered"><section class="modal-content"><div class="modal-header"><h2 class="modal-title" id="legend-title">チェック表示の凡例</h2><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="閉じる"></button></div><div class="modal-body"><p class="text-secondary">チェックはログの解析結果を示し、この画面では編集しません。</p>
-@foreach (['used'=>'使用した瞬間','on'=>'被弾に軽減を適用','up'=>'効果中','cd'=>'リキャスト中','x'=>'バリア破壊','off'=>'未使用'] as $state=>$label)<div class="d-flex align-items-center gap-3 mb-2"><span class="mit mit-legend-cell mit-{{ $state }}" aria-hidden="true"></span>{{ $label }}</div>@endforeach
-</div></section></div></div>
     @include('_copyright', ['compact' => true])
 @if (($shareDraft ?? false) || ($isShared ?? false))
     @include('fflogs._timeline_share')
