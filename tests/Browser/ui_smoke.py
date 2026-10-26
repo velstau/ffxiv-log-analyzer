@@ -87,7 +87,7 @@ with sync_playwright() as pw:
             page.locator('[onclick^="saveModalAsImage"]').click()
         download.value.save_as(OUT / f'player-phase{phase}.png')
         page.keyboard.press('Escape')
-        expect(page.locator('.timeline-state-key .mit')).to_have_count(6)
+        expect(page.locator('.timeline-state-key > span .mit')).to_have_count(6)
     assert page.locator('[onclick="saveFullTimeline()"]').count() == 0
 
     visit('/party-search')
