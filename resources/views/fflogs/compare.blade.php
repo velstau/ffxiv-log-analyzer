@@ -17,7 +17,8 @@
         .potion { width: 1.05rem; height: 1.05rem; vertical-align: middle; display: inline-block; }
         .jobicon { width: 1.35rem; height: 1.35rem; vertical-align: middle; display: inline-block; }
         /* ミラー型A/B比較行（コンパクト・フルネーム両側） */
-        .cmp-head, .cmp-row { display: grid; grid-template-columns: 240px 1fr 1fr 240px 84px; align-items: center; gap: 6px; }
+        /* 名前・数値の列は内容に合わせて広げ、差の列は「実際 +12,345≈」が収まる幅にする（固定幅だと見切れた） */
+        .cmp-head, .cmp-row { display: grid; grid-template-columns: minmax(270px, 1.15fr) minmax(0, 1fr) minmax(0, 1fr) minmax(270px, 1.15fr) 132px; align-items: center; gap: 6px; }
         .cmp-row { padding: 2px 0; border-top: 1px solid #1f2937; }
         .cmp-row:hover { background: #1f2937; }
         .bwrap { display: flex; align-items: center; height: 1.15rem; overflow: hidden; }
@@ -40,9 +41,9 @@
         .pot-diff { font-size:1rem; line-height: 1; display: inline-block;
             border-bottom: 1px dashed #64748b; white-space: nowrap; margin-top: -3px; }
         .cmp-row > div:last-child { line-height: 1.15; }
-        .dlab { color: #64748b; font-size:1rem; margin-right: 2px; }
+        .dlab { color: #94a3b8; font-size:1rem; margin-right: 2px; }
         /* ロールペア別（タンク/ヒーラー/近接/遠隔）の合計rDPS比較ストリップ */
-        .role-strip { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-bottom: 8px; }
+        .role-strip { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 6px; margin-bottom: 8px; }
         .role-cell { background: rgba(17,24,39,.5); border-radius: 4px; padding: 4px 8px; line-height: 1.35; }
         /* 想定rDPS数値（▶n） */
         .pot { color: #34d399; font-size:1rem; font-family: monospace; }
@@ -50,20 +51,24 @@
         .shot-btn { color: #9ca3af; font-size:1rem; line-height: 1; padding: 2px 6px; border-radius: 4px; }
         .shot-btn:hover { color: #fff; background: #374151; }
         .shot-btn:disabled { opacity: .5; cursor: wait; }
-        .a-info { text-align: right; line-height: 1.15; overflow: hidden; }
-        .b-info { text-align: left; line-height: 1.15; overflow: hidden; }
-        .nm { font-size:1rem; color: #e5e7eb; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .a-info { text-align: right; line-height: 1.15; min-width: 0; }
+        .b-info { text-align: left; line-height: 1.15; min-width: 0; }
+        /* 名前の行：狭いときは名前だけを省略し、Active% とジョブアイコンは常に見せる */
+        .nm { font-size:1rem; color: #e5e7eb; white-space: nowrap; display: flex; align-items: center; gap: 4px; min-width: 0; }
+        .a-info .nm { justify-content: flex-end; }
+        .nm > * { flex-shrink: 0; }
+        .nm > .nm-name { flex-shrink: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
         .rd { font-size:1rem; font-weight: 700; font-family: monospace; }
         .sub { font-size:1rem; color: #9ca3af; font-family: monospace; }
-        /* 数値＋バッジ（薬/💀/ダメ低下）行：折り返さず1行に収める */
-        .stat { display: flex; align-items: center; gap: 4px; white-space: nowrap; }
+        /* 数値＋バッジ（薬/💀/ダメ低下）行：入りきらないときは隠さず折り返す */
+        .stat { display: flex; align-items: center; flex-wrap: wrap; column-gap: 6px; row-gap: 2px; white-space: nowrap; }
         .a-info .stat { justify-content: flex-end; }
         .badges { display: inline-flex; align-items: center; gap: 2px; flex-shrink: 0; }
         .badges .skull { font-size:1rem; line-height: 1; }
         .badges .sec { color: #fb923c; font-size:1rem; font-family: monospace; }
         /* 敵別（ボス別）ダメージ ミラー行 */
         .en-block { margin-top: 6px; }
-        .en-head, .en-row { display: grid; grid-template-columns: 168px 78px 1fr 1fr 78px; align-items: center; gap: 6px; }
+        .en-head, .en-row { display: grid; grid-template-columns: minmax(200px, 1.3fr) 96px minmax(0, 1fr) minmax(0, 1fr) 96px; align-items: center; gap: 6px; }
         .en-row { padding: 1px 0; }
         .en-name { font-size:1rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         /* アドバイス欄 */
@@ -74,7 +79,7 @@
         .advice ul { margin: 4px 0 0; padding-left: 1.1rem; list-style: disc; }
         .advice li { font-size:1rem; line-height: 1.5; color: #e5e7eb; }
         /* ===== フェーズ内 rDPS推移グラフ：範囲選択パネル ===== */
-        .ts-hint { color: #6b7280; font-weight: 400; font-size:1rem; }
+        .ts-hint { color: #9ca3af; font-weight: 400; font-size:1rem; }
         /* ドラッグ選択中に本文テキストが選択されないように。縦スクロールは残す（横ドラッグ＝範囲選択）。 */
         .phase-ts { cursor: crosshair; user-select: none; -webkit-user-select: none; touch-action: pan-y; }
         .ts-panel:empty { display: none; }
@@ -84,7 +89,7 @@
         .ts-range { font-family: monospace; font-size:1rem; color: #fde047; font-weight: 700; }
         .ts-len { font-family: monospace; font-size:1rem; color: #9ca3af; }
         .ts-vals { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; font-family: monospace; font-size:1rem; }
-        .ts-note { color: #6b7280; font-size:1rem; margin-top: 2px; }
+        .ts-note { color: #9ca3af; font-size:1rem; margin-top: 2px; }
         .ts-btns { display: flex; gap: 6px; margin-left: auto; }
         .ts-btn { font-size:1rem; padding: 2px 8px; border-radius: 4px; background: #374151; color: #d1d5db; }
         .ts-btn:hover { background: #4b5563; color: #fff; }
@@ -101,6 +106,37 @@
         .ts-atk .atk { display: inline-block; background: rgba(245,158,11,.14); border: 1px solid rgba(245,158,11,.35);
             border-radius: 3px; padding: 0 5px; margin: 1px 3px 1px 0; white-space: nowrap; }
         .ts-atk .atk .t { color: #94a3b8; font-family: monospace; font-size:1rem; margin-right: 3px; }
+        /* 暗い背景で読みにくかった青・赤・見出しを明るくする（Tabler の既定はコントラスト 3.2〜3.6:1） */
+        .comparison-page h1.text-primary, .comparison-page h2.text-primary { color: #6ea8fe !important; }
+        .comparison-page .text-blue { color: #60a5fa !important; }
+        .comparison-page .text-red { color: #fb7185 !important; }
+        /* 冒頭の結論 */
+        .compare-verdict { border-left: 4px solid #eab308; background: rgba(234,179,8,.08); border-radius: 4px; padding: 10px 14px; font-size: 1.1rem; }
+        .compare-help > summary { cursor: pointer; color: #9ca3af; }
+        .compare-help[open] > summary { margin-bottom: 6px; }
+        /* ===== 狭い画面（スマホ）：横に並べず縦に積む ===== */
+        @media (max-width: 767.98px) {
+            .compare-sides { grid-template-columns: 1fr !important; }
+            .phase-head { flex-wrap: wrap; }
+            .phase-head .phase-party { order: 3; flex-basis: 100%; }
+            .cmp-head { display: none; }
+            .cmp-row { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); grid-template-areas: "ai bi" "ba bb" "df df"; row-gap: 3px; padding: 6px 0; }
+            .cmp-row > .a-info { grid-area: ai; }
+            .cmp-row > .b-info { grid-area: bi; }
+            .cmp-row > .bwrap.a { grid-area: ba; }
+            .cmp-row > .bwrap.b { grid-area: bb; }
+            .cmp-row > .cmp-diff { grid-area: df; display: flex; justify-content: flex-end; gap: 12px; }
+            .en-head > .en-note { display: none; }
+            .en-head, .en-row { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); grid-template-areas: "nm nm" "av bv" "ba bb"; row-gap: 2px; }
+            .en-head > :first-child, .en-row > .en-name { grid-area: nm; }
+            .en-head > .en-av, .en-row > .en-av { grid-area: av; }
+            .en-head > .en-bv, .en-row > .en-bv { grid-area: bv; }
+            .en-row > .bwrap.a { grid-area: ba; }
+            .en-row > .bwrap.b { grid-area: bb; }
+            .ts-btns { margin-left: 0; flex-wrap: wrap; }
+            .role-strip { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+            .role-cell > div { white-space: normal !important; }
+        }
     </style>
 </head>
 
@@ -154,8 +190,37 @@
             </div>
         </div>
 
+        {{-- 結論：どちらがどれだけ上か・差が最も大きいフェーズ（説明より先に見せる） --}}
+        @php
+            $ovA = (float) $A['overall']['partyRdps'];
+            $ovB = (float) $B['overall']['partyRdps'];
+            $ovGapPct = max($ovA, $ovB) > 0 ? abs($ovB - $ovA) / max($ovA, $ovB) * 100 : 0;
+            $worstPhase = null;
+            if (count($phaseIds) > 1) {
+                foreach ($phaseIds as $pid) {
+                    if (isset($aPhase[$pid], $bPhase[$pid])) {
+                        $pd = $bPhase[$pid]['summary']['partyRdps'] - $aPhase[$pid]['summary']['partyRdps'];
+                        if (!$worstPhase || abs($pd) > abs($worstPhase[1])) {
+                            $worstPhase = [$pid, $pd];
+                        }
+                    }
+                }
+            }
+        @endphp
+        <div class="compare-verdict legacy-mb-4">
+            @if ($ovGapPct < 1.5)
+                パーティ rDPS は<strong>ほぼ互角</strong>（差 {!! $diffSpan($ovB - $ovA) !!}・{{ number_format($ovGapPct, 1) }}%）。
+            @else
+                <strong class="{{ $ovB > $ovA ? 'text-red' : 'text-blue' }}">{{ $ovB > $ovA ? 'B' : 'A' }} パーティ</strong>が
+                パーティ rDPS で <strong class="font-monospace">{{ $fmt(abs($ovB - $ovA)) }}</strong>（{{ number_format($ovGapPct, 1) }}%）上回っています。
+            @endif
+            @if ($worstPhase && abs($worstPhase[1]) >= 1)
+                差が最も大きいのは <a href="#phase-{{ $worstPhase[0] }}" class="text-yellow fw-bold">Phase {{ $worstPhase[0] }}</a>（B−A {!! $diffSpan($worstPhase[1]) !!}）。
+            @endif
+        </div>
+
         {{-- ヘッダ：A vs B 概要 --}}
-        <div class="legacy-grid legacy-grid-cols-2 legacy-gap-4 legacy-mb-6">
+        <div class="legacy-grid legacy-grid-cols-2 legacy-gap-4 legacy-mb-6 compare-sides">
             <div class="bg-surface rounded legacy-p-4 legacy-border-l-4 border-blue">
                 <div class="text-blue fw-bold fs-3">A パーティ</div>
                 <div class="text-secondary">{{ $A['zoneName'] }} ／ 戦闘時間 {{ gmdate('i:s', (int) $A['durationSec']) }}</div>
@@ -175,13 +240,14 @@
         {{-- ===== 全体サマリ ===== --}}
         <section class="legacy-mb-8">
             <h2 class="fs-2 fw-bold text-primary legacy-mb-2 legacy-border-b border-secondary legacy-pb-1">全体サマリ（戦闘全体）</h2>
-            <div class="bg-surface rounded legacy-p-3 legacy-mb-3 text-base text-body legacy-leading-relaxed">
+            <details class="compare-help bg-surface rounded legacy-p-3 legacy-mb-3 text-base text-body legacy-leading-relaxed">
+                <summary>指標の意味（総ダメージ・DPS・rDPS）</summary>
                 <div><span class="text-body fw-bold">総ダメージ</span>：パーティ全員がボスに与えたダメージの合計。</div>
                 <div><span class="text-body fw-bold">パーティDPS（raw）</span>：総ダメージ ÷ 戦闘時間。各自が画面上で実際に出した素のダメージ量の合計レート。</div>
                 <div><span class="text-body fw-bold">パーティrDPS</span>：シナジー（バフ/デバフによる貢献）を配分し直した<span class="text-yellow">実力指標</span>。
                     バフを配る職（学者・詩人・踊り子など）は配った分が加算され、貰った側は割り引かれる。
                     「素のダメージ」では損する支援職も正当に評価でき、A/Bの地力比較に向く。</div>
-            </div>
+            </details>
             @php
                 $metrics = [
                     ['総ダメージ', $A['overall']['partyTotal'], $B['overall']['partyTotal']],
@@ -245,9 +311,9 @@
         {{-- ===== フェーズ別 火力（個人別 A/B 差） ===== --}}
         <section class="legacy-mb-8">
             <h2 class="fs-2 fw-bold text-primary legacy-mb-2 legacy-border-b border-secondary legacy-pb-1">フェーズ別 火力（個人別 A/B 比較）</h2>
-            <p class="text-base text-secondary legacy-mb-3"><span class="text-blue">A=左/青</span>・<span class="text-red">B=右/赤</span>のバーが中央で対向（バー長＝rDPS、長い方が優勢／バー上＝総ダメージ）。
-                名前の（）はActive%、大きい数字＝rDPS、小さい字＝DPS・aDPS。<img class="potion" src="{{ asset('icons') }}/abilities/020000-020710.png" onerror="this.style.display='none'">=薬・💀=死亡・<img class="potion" src="{{ asset('icons') }}/abilities/215000-215520.png" onerror="this.style.display='none'"><span class="text-orange">ns</span>=ダメージ低下デバフn秒被弾。
-                <span class="pot">▶n</span>と<span class="text-body" style="border: 1px dashed #94a3b8; padding: 0 3px;">斜線バー</span>=死亡・衰弱・ダメ低下が無かった場合の想定rDPS（ホバーで内訳）。差はB−A。同ジョブ不在時は<span class="text-yellow">同ロール</span>で対戦（≈）。</p>
+            <details class="compare-help text-base text-secondary legacy-mb-3"><summary>表の見方（バー・アイコン・想定値）</summary><span class="text-blue">A=左/青</span>・<span class="text-red">B=右/赤</span>のバーが中央で対向（バー長＝rDPS、長い方が優勢／バー上＝総ダメージ）。
+                名前の（）はActive%、大きい数字＝rDPS、小さい字＝DPS・aDPS。<img class="potion" src="{{ asset('icons') }}/abilities/020000-020710.png" onerror="this.style.display='none'">=薬・💀=死亡・<img class="potion" src="{{ asset('icons') }}/abilities/215000-215520.png" onerror="this.style.display='none'"><span class="text-orange">ns</span>=ダメージ低下デバフn秒被弾。ダメージ低下の低下率はコンテンツごとに違い、ログに記録されないため、出典のある一部のコンテンツ以外は -{{ round(\App\Support\MitigationSpec::DD_REDUCTION * 100) }}% と仮定しています（アイコンのホバーで確認）。
+                <span class="pot">▶n</span>と<span class="text-body" style="border: 1px dashed #94a3b8; padding: 0 3px;">斜線バー</span>=死亡・衰弱・ダメ低下が無かった場合の想定rDPS（ホバーで内訳）。差はB−A。同ジョブ不在時は<span class="text-yellow">同ロール</span>で対戦（≈）。</details>
 
             @foreach ($phaseIds as $pid)
                 @php
@@ -261,13 +327,13 @@
                     $bList = array_values($bs['players'] ?? []);
                 @endphp
 
-                <div class="phase-card bg-surface rounded legacy-p-3 legacy-mb-3" data-pid="{{ $pid }}">
-                    <div class="legacy-flex legacy-items-center legacy-justify-between legacy-gap-3 legacy-mb-2">
+                <div class="phase-card bg-surface rounded legacy-p-3 legacy-mb-3" data-pid="{{ $pid }}" id="phase-{{ $pid }}">
+                    <div class="phase-head legacy-flex legacy-items-center legacy-justify-between legacy-gap-3 legacy-mb-2">
                         <div class="fw-bold text-yellow fs-3 legacy-shrink-0">Phase {{ $pid }}
-                            <button type="button" class="btn shot-btn" title="このフェーズを画像として保存">📷</button>
+                            <button type="button" class="btn btn-sm shot-btn" title="このフェーズを画像として保存">画像保存</button>
                         </div>
                         {{-- パーティ計（1行コンパクト） --}}
-                        <div class="legacy-flex-1 legacy-flex legacy-items-center legacy-gap-2 text-base">
+                        <div class="phase-party legacy-flex-1 legacy-flex legacy-items-center legacy-gap-2 text-base">
                             <span class="text-blue font-monospace legacy-shrink-0">A {{ $as ? $fmt($ard) : '—' }}</span>
                             <div class="bar-track legacy-flex-1"><div class="bar-a" style="width: {{ $paw }}%"></div></div>
                             <span class="text-secondary legacy-shrink-0">計rDPS</span>
@@ -318,7 +384,7 @@
                                 <span>⏱ フェーズ内 rDPS推移（10秒毎・パーティ計）</span>
                                 <span class="ts-hint">グラフを左右にドラッグ＝範囲選択 ／ ダブルクリック＝解除・全体表示</span>
                             </div>
-                            <div class="bg-body rounded legacy-p-2" style="height: 250px;">
+                            <div class="bg-body rounded legacy-p-2" style="height: 320px;">
                                 <canvas class="phase-ts"
                                     data-a='@json($aSer)' data-b='@json($bSer)'
                                     data-a1='@json($aP['secDmg'] ?? [])' data-b1='@json($bP['secDmg'] ?? [])'
@@ -366,12 +432,12 @@
                         responsive: true, maintainAspectRatio: false,
                         interaction: { mode: 'index', intersect: false },
                         plugins: {
-                            legend: { labels: { color: '#e5e7eb', font: { size: 13 } } },
-                            tooltip: { callbacks: { label: (c) => c.dataset.label + '：' + (c.parsed.y ?? 0).toLocaleString() } }
+                            legend: { labels: { color: '#e5e7eb', font: { size: 16 } } },
+                            tooltip: { titleFont: { size: 16 }, bodyFont: { size: 16 }, callbacks: { label: (c) => c.dataset.label + '：' + (c.parsed.y ?? 0).toLocaleString() } }
                         },
                         scales: {
-                            x: { ticks: { color: '#cbd5e1', font: { size: 13 } }, grid: { color: '#374151' } },
-                            y: { ticks: { color: '#cbd5e1', font: { size: 12 }, callback: (v) => v.toLocaleString() }, grid: { color: '#374151' }, title: { display: true, text: 'パーティ rDPS', color: '#9ca3af' } }
+                            x: { ticks: { color: '#cbd5e1', font: { size: 16 } }, grid: { color: '#374151' } },
+                            y: { ticks: { color: '#cbd5e1', font: { size: 16 }, maxTicksLimit: 6, callback: (v) => v.toLocaleString() }, grid: { color: '#374151' }, title: { display: true, text: 'パーティ rDPS', color: '#9ca3af', font: { size: 16 } } }
                         }
                     }
                 });
@@ -484,8 +550,8 @@
                     ctx.save();
                     rows.forEach((row, ri) => {
                         if (!row.list.length) return;
-                        // 凡例は下に置いてあるので、プロット領域の上パディング（padding.top=26）に2段で描く
-                        const y = ca.top - 24 + ri * 11;
+                        // 凡例は下に置いてあるので、プロット領域の上パディング（padding.top=44）に2段で描く
+                        const y = ca.top - 40 + ri * 18;
                         ctx.strokeStyle = row.color;
                         ctx.lineWidth = 2;
                         ctx.beginPath();
@@ -493,14 +559,14 @@
                             const x = sx.getPixelForValue(c.t);
                             if (x < ca.left - 1 || x > ca.right + 1) return;
                             ctx.moveTo(Math.round(x) + .5, y);
-                            ctx.lineTo(Math.round(x) + .5, y + 7);
+                            ctx.lineTo(Math.round(x) + .5, y + 12);
                         });
                         ctx.stroke();
                         ctx.fillStyle = row.color;
-                        ctx.font = '9px sans-serif';
+                        ctx.font = 'bold 16px sans-serif';
                         ctx.textAlign = 'left';
                         ctx.textBaseline = 'alphabetic';
-                        ctx.fillText(row.label, ca.right + 3, y + 7);
+                        ctx.fillText(row.label, ca.right + 4, y + 13);
                     });
                     ctx.restore();
                 }
@@ -534,12 +600,13 @@
                         responsive: true, maintainAspectRatio: false,
                         animation: false, // 画像保存時に途中状態が写らないように
                         // 上パディングは敵攻撃マーカー（2段）の描画枠。凡例は下に置いて上を空ける。
-                        layout: { padding: { top: 26, bottom: 4, left: 12, right: 30 } },
+                        layout: { padding: { top: 44, bottom: 4, left: 12, right: 32 } },
                         interaction: { mode: 'index', axis: 'x', intersect: false },
                         plugins: {
                             datalabels: { display: false }, // 10秒毎では点が密で数値ラベルは潰れるため出さない
-                            legend: { position: 'bottom', align: 'start', labels: { color: '#e5e7eb', font: { size: 11 }, boxWidth: 18, padding: 8 } },
+                            legend: { position: 'bottom', align: 'start', labels: { color: '#e5e7eb', font: { size: 16 }, boxWidth: 18, padding: 10 } },
                             tooltip: {
+                                titleFont: { size: 16 }, bodyFont: { size: 16 }, footerFont: { size: 16 },
                                 callbacks: {
                                     title: (items) => items.length ? (fmtT(Math.max(0, items[0].parsed.x - BW)) + '〜' + fmtT(items[0].parsed.x)) : '',
                                     label: (c) => c.dataset.label + '：' + nf(c.parsed.y ?? 0) + ' rDPS',
@@ -561,11 +628,11 @@
                         scales: {
                             x: {
                                 type: 'linear', min: baseMin, max: baseMax,
-                                ticks: { stepSize: tickStep, color: '#9ca3af', font: { size: 10 }, callback: (v) => fmtT(v) },
+                                ticks: { stepSize: tickStep, color: '#9ca3af', font: { size: 16 }, callback: (v) => fmtT(v) },
                                 grid: { color: '#1f2937' },
-                                title: { display: true, text: 'フェーズ開始からの経過時間', color: '#6b7280', font: { size: 10 } }
+                                title: { display: true, text: 'フェーズ開始からの経過時間', color: '#9ca3af', font: { size: 16 } }
                             },
-                            y: { beginAtZero: true, ticks: { color: '#9ca3af', font: { size: 10 }, callback: (v) => v.toLocaleString() }, grid: { color: '#374151' } }
+                            y: { beginAtZero: true, ticks: { color: '#9ca3af', font: { size: 16 }, maxTicksLimit: 5, callback: (v) => v.toLocaleString() }, grid: { color: '#374151' } }
                         }
                     }
                 });

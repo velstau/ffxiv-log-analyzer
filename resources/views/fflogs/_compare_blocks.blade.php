@@ -123,34 +123,36 @@
             {{-- A：フルネーム(Active%)＋職アイコン / rDPS・DPS・aDPS --}}
             <div class="a-info">
                 @if ($a)
-                    <div class="nm">@if ($aHasPot)<span class="pot" title="{{ $potTitle($a) }}">▶{{ $fmt($apot) }}</span> @endif<span style="color: {{ $a['color'] }};">{{ $a['name'] }}</span>
+                    <div class="nm" title="{{ $a['name'] }}"><span class="nm-name" style="color: {{ $a['color'] }};">{{ $a['name'] }}</span>
                         <span class="text-secondary" title="Active {{ $a['activePct'] }}%">({{ round($a['activePct']) }}%)</span>
                         @if ($a['iconFile'])<img class="jobicon legacy-ml-1" src="{{ asset('icons') }}/jobs/{{ $a['iconFile'] }}.png" onerror="this.style.display='none'">@endif
                     </div>
                     <div class="stat">
                         @if (!empty($a['potion']) || !empty($a['deaths']) || ($a['ddSec'] ?? 0) >= 1)
-                            <span class="badges">@if (!empty($a['potion']))<img class="potion" src="{{ asset('icons') }}/abilities/{{ $a['potionIcon'] ?? '' }}" title="薬使用" onerror="this.style.display='none'">@endif @if (!empty($a['deaths']))<span class="skull" title="{{ $scope }}で死亡{{ $a['deaths'] }}回">💀@if ($a['deaths'] > 1)<span class="sec">×{{ $a['deaths'] }}</span>@endif</span>@endif @if (($a['ddSec'] ?? 0) >= 1)<span title="ダメージ低下デバフ {{ round($a['ddSec']) }}秒">@if (!empty($a['ddIcon']))<img class="potion" src="{{ asset('icons') }}/abilities/{{ $a['ddIcon'] }}" onerror="this.style.display='none'">@endif<span class="sec">{{ round($a['ddSec']) }}s</span></span>@endif</span>
+                            <span class="badges">@if (!empty($a['potion']))<img class="potion" src="{{ asset('icons') }}/abilities/{{ $a['potionIcon'] ?? '' }}" title="薬使用" onerror="this.style.display='none'">@endif @if (!empty($a['deaths']))<span class="skull" title="{{ $scope }}で死亡{{ $a['deaths'] }}回">💀@if ($a['deaths'] > 1)<span class="sec">×{{ $a['deaths'] }}</span>@endif</span>@endif @if (($a['ddSec'] ?? 0) >= 1)<span title="ダメージ低下デバフ {{ round($a['ddSec']) }}秒（与ダメ{{ isset($a['ddRate']) ? '-' . round($a['ddRate'] * 100) . '%' : '低下' }}{{ empty($a['ddKnown']) ? 'と仮定。低下率はコンテンツごとに違い、ログに記録されない' : '' }}）">@if (!empty($a['ddIcon']))<img class="potion" src="{{ asset('icons') }}/abilities/{{ $a['ddIcon'] }}" onerror="this.style.display='none'">@endif<span class="sec">{{ round($a['ddSec']) }}s</span></span>@endif</span>
                         @endif
                         <span class="sub">D{{ $fmt($a['dps']) }}/a{{ $fmt($a['adps']) }}</span>
+                        @if ($aHasPot)<span class="pot" title="{{ $potTitle($a) }}">▶{{ $fmt($apot) }}</span>@endif
                         <span class="rd {{ $d < 0 ? 'text-blue' : 'text-white' }}">{{ $fmt($a['rdps']) }}</span>
                     </div>
                 @else
                     <span class="text-secondary">—</span>
                 @endif
             </div>
-            <div class="bwrap a">@if ($agw > 0)@if ($agw < 14)<span class="gnum" title="{{ $potTitle($a) }}">{{ $fmtAmt($a['potentialTotal'] ?? 0) }}</span>@endif<div class="bar-ghost a" style="width: {{ $agw }}%" title="{{ $potTitle($a) }}">@if ($agw >= 14)▶{{ $fmtAmt($a['potentialTotal'] ?? 0) }}@endif</div>@endif<div class="bar-h a" style="width: {{ $aw }}%">@if ($a){{ $fmtAmt($a['total']) }}@endif</div></div>
-            <div class="bwrap"><div class="bar-h b" style="width: {{ $bw }}%">@if ($b){{ $fmtAmt($b['total']) }}@endif</div>@if ($bgw > 0)<div class="bar-ghost b" style="width: {{ $bgw }}%" title="{{ $potTitle($b) }}">@if ($bgw >= 14){{ $fmtAmt($b['potentialTotal'] ?? 0) }}◀@endif</div>@if ($bgw < 14)<span class="gnum" title="{{ $potTitle($b) }}">{{ $fmtAmt($b['potentialTotal'] ?? 0) }}</span>@endif @endif</div>
+            <div class="bwrap a">@if ($agw > 0)@if ($agw < 25)<span class="gnum" title="{{ $potTitle($a) }}">{{ $fmtAmt($a['potentialTotal'] ?? 0) }}</span>@endif<div class="bar-ghost a" style="width: {{ $agw }}%" title="{{ $potTitle($a) }}">@if ($agw >= 25)▶{{ $fmtAmt($a['potentialTotal'] ?? 0) }}@endif</div>@endif<div class="bar-h a" style="width: {{ $aw }}%">@if ($a){{ $fmtAmt($a['total']) }}@endif</div></div>
+            <div class="bwrap b"><div class="bar-h b" style="width: {{ $bw }}%">@if ($b){{ $fmtAmt($b['total']) }}@endif</div>@if ($bgw > 0)<div class="bar-ghost b" style="width: {{ $bgw }}%" title="{{ $potTitle($b) }}">@if ($bgw >= 25){{ $fmtAmt($b['potentialTotal'] ?? 0) }}◀@endif</div>@if ($bgw < 25)<span class="gnum" title="{{ $potTitle($b) }}">{{ $fmtAmt($b['potentialTotal'] ?? 0) }}</span>@endif @endif</div>
             {{-- B：職アイコン＋フルネーム(Active%) / rDPS・DPS・aDPS --}}
             <div class="b-info">
                 @if ($b)
-                    <div class="nm">@if ($b['iconFile'])<img class="jobicon legacy-mr-1" src="{{ asset('icons') }}/jobs/{{ $b['iconFile'] }}.png" onerror="this.style.display='none'">@endif<span style="color: {{ $b['color'] }};">{{ $b['name'] }}</span>
-                        <span class="text-secondary" title="Active {{ $b['activePct'] }}%">({{ round($b['activePct']) }}%)</span>@if ($bHasPot) <span class="pot" title="{{ $potTitle($b) }}">▶{{ $fmt($bpot) }}</span>@endif
+                    <div class="nm" title="{{ $b['name'] }}">@if ($b['iconFile'])<img class="jobicon legacy-mr-1" src="{{ asset('icons') }}/jobs/{{ $b['iconFile'] }}.png" onerror="this.style.display='none'">@endif<span class="nm-name" style="color: {{ $b['color'] }};">{{ $b['name'] }}</span>
+                        <span class="text-secondary" title="Active {{ $b['activePct'] }}%">({{ round($b['activePct']) }}%)</span>
                     </div>
                     <div class="stat">
                         <span class="rd {{ $d > 0 ? 'text-red' : 'text-white' }}">{{ $fmt($b['rdps']) }}</span>
+                        @if ($bHasPot)<span class="pot" title="{{ $potTitle($b) }}">▶{{ $fmt($bpot) }}</span>@endif
                         <span class="sub">D{{ $fmt($b['dps']) }}/a{{ $fmt($b['adps']) }}</span>
                         @if (!empty($b['potion']) || !empty($b['deaths']) || ($b['ddSec'] ?? 0) >= 1)
-                            <span class="badges">@if (!empty($b['potion']))<img class="potion" src="{{ asset('icons') }}/abilities/{{ $b['potionIcon'] ?? '' }}" title="薬使用" onerror="this.style.display='none'">@endif @if (!empty($b['deaths']))<span class="skull" title="{{ $scope }}で死亡{{ $b['deaths'] }}回">💀@if ($b['deaths'] > 1)<span class="sec">×{{ $b['deaths'] }}</span>@endif</span>@endif @if (($b['ddSec'] ?? 0) >= 1)<span title="ダメージ低下デバフ {{ round($b['ddSec']) }}秒">@if (!empty($b['ddIcon']))<img class="potion" src="{{ asset('icons') }}/abilities/{{ $b['ddIcon'] }}" onerror="this.style.display='none'">@endif<span class="sec">{{ round($b['ddSec']) }}s</span></span>@endif</span>
+                            <span class="badges">@if (!empty($b['potion']))<img class="potion" src="{{ asset('icons') }}/abilities/{{ $b['potionIcon'] ?? '' }}" title="薬使用" onerror="this.style.display='none'">@endif @if (!empty($b['deaths']))<span class="skull" title="{{ $scope }}で死亡{{ $b['deaths'] }}回">💀@if ($b['deaths'] > 1)<span class="sec">×{{ $b['deaths'] }}</span>@endif</span>@endif @if (($b['ddSec'] ?? 0) >= 1)<span title="ダメージ低下デバフ {{ round($b['ddSec']) }}秒（与ダメ{{ isset($b['ddRate']) ? '-' . round($b['ddRate'] * 100) . '%' : '低下' }}{{ empty($b['ddKnown']) ? 'と仮定。低下率はコンテンツごとに違い、ログに記録されない' : '' }}）">@if (!empty($b['ddIcon']))<img class="potion" src="{{ asset('icons') }}/abilities/{{ $b['ddIcon'] }}" onerror="this.style.display='none'">@endif<span class="sec">{{ round($b['ddSec']) }}s</span></span>@endif</span>
                         @endif
                     </div>
                 @else
@@ -158,7 +160,7 @@
                 @endif
             </div>
             {{-- 差（1行目＝実際差、2行目＝想定差。同ロール対戦の≈は同じ行に付ける） --}}
-            <div class="text-end text-base" @if (!empty($r['role'])) title="ロール比較" @endif>
+            <div class="cmp-diff text-end text-base" @if (!empty($r['role'])) title="ロール比較" @endif>
                 @if ($hasBoth)
                     <div style="white-space: nowrap;"><span class="dlab">実際</span>{!! $diffSpan($d) !!}@if (!empty($r['role']))<span class="text-yellow text-base">≈</span>@endif</div>
                     @if ($aHasPot || $bHasPot)

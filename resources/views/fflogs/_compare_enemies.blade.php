@@ -13,9 +13,9 @@
     <div class="en-block">
         <div class="en-head text-base text-secondary legacy-pb-1 legacy-mb-1 legacy-border-b border-secondary">
             <div>敵（ボス／雑魚）</div>
-            <div class="text-end text-blue">A 被ダメ</div>
-            <div class="text-secondary" style="grid-column: span 2; text-align:center;">バー長＝そのフェーズで各敵に入った総ダメージ</div>
-            <div class="text-start text-red">B 被ダメ</div>
+            <div class="en-av text-end text-blue">A 被ダメ</div>
+            <div class="en-note text-secondary" style="grid-column: span 2; text-align:center;">バー長＝各敵に入った総ダメージ</div>
+            <div class="en-bv text-start text-red">B 被ダメ</div>
         </div>
         @foreach ($enNames as $nm)
             @php
@@ -27,10 +27,10 @@
             @endphp
             <div class="en-row">
                 <div class="en-name {{ $isBoss ? 'text-yellow fw-bold' : 'text-body' }}" title="{{ $nm }}">{{ $nm }}</div>
-                <div class="text-end font-monospace text-base {{ $av >= $bv ? 'text-blue' : 'text-secondary' }}">{{ $av > 0 ? $fmtAmt($av) : '—' }}</div>
+                <div class="en-av text-end font-monospace text-base {{ $av >= $bv ? 'text-blue' : 'text-secondary' }}">{{ $av > 0 ? $fmtAmt($av) : '—' }}</div>
                 <div class="bwrap a"><div class="bar-h a" style="width: {{ $aw }}%"></div></div>
-                <div class="bwrap"><div class="bar-h b" style="width: {{ $bw }}%"></div></div>
-                <div class="text-start font-monospace text-base {{ $bv >= $av ? 'text-red' : 'text-secondary' }}">{{ $bv > 0 ? $fmtAmt($bv) : '—' }}</div>
+                <div class="bwrap b"><div class="bar-h b" style="width: {{ $bw }}%"></div></div>
+                <div class="en-bv text-start font-monospace text-base {{ $bv >= $av ? 'text-red' : 'text-secondary' }}">{{ $bv > 0 ? $fmtAmt($bv) : '—' }}</div>
             </div>
         @endforeach
     </div>

@@ -47,9 +47,9 @@
 /* Comparison charts/estimates retain their original meanings and data. */
 .logs-app .bar-h.a{background:var(--tblr-blue)}.logs-app .bar-h.b{background:var(--tblr-red)}
 .logs-app .bar-h,.logs-app .bar-ghost,.logs-app .gnum,.logs-app .pot-diff,.logs-app .dlab,.logs-app .pot,.logs-app .shot-btn,.logs-app .nm,.logs-app .sub,.logs-app .badges .skull,.logs-app .badges .sec,.logs-app .en-name,.logs-app .advice li,.logs-app .ts-hint{font-size:1rem}
-.logs-app .cmp-head,.logs-app .cmp-row{grid-template-columns:minmax(150px,240px) minmax(80px,1fr) minmax(80px,1fr) minmax(150px,240px) 90px;min-width:720px}
+/* 個人比較表・ロール別の列幅と狭い画面の並べ方は compare.blade.php 側で決める（ここで固定幅にすると見切れる） */
 .logs-app .phase-card,.logs-app .compare-scroll{min-width:0;overflow-x:auto}
-.logs-app .role-strip{min-width:640px}.logs-app canvas{max-width:100%}
+.logs-app canvas{max-width:100%}
 @media(max-width:991px){.timeline-state-key{padding-bottom:.25rem}}
 @media(max-width:600px){.analysis-topline{gap:.375rem}.analysis-action-group+.analysis-action-group{border:0;padding-left:0}.analysis-tabline{padding:0 .25rem}.timeline-footer{max-height:5.5rem;overflow:auto}.navbar .container-xl{flex-wrap:wrap}.app-form{padding:1rem}.timeline-app #mitigation-table .c-base,.timeline-app #mitigation-table .c-hit{position:static!important}}
 @media(prefers-reduced-motion:reduce){.logs-app *{animation:none!important;transition:none!important}}
