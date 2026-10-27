@@ -67,7 +67,7 @@ class CompareShareTest extends TestCase
      * 共有の範囲再集計の材料。各 10 秒区間に、総ダメージが区間ごとに増える 1 人だけを置く。
      * totalTime 10 秒・combatTime 9 秒（窓ごとに 1 秒引かれる）・activeTime 8 秒。
      */
-    private function fakeBuckets(bool $withRoster = true): void
+    private function fakeBuckets(bool $withRoster = true, bool $matchPhase = true): void
     {
         foreach (['FixtureA', 'FixtureB'] as $code) {
             Cache::put("fflogs:fight:{$code}:1", ['startTime' => 0, 'endTime' => 200000, 'name' => 'Test boss', 'gameZone' => ['name' => 'Test zone'], 'encounterID' => 0], 600);
@@ -77,6 +77,12 @@ class CompareShareTest extends TestCase
             }
         }
         $data = UiData::compare();
+        if ($matchPhase) {
+            // フェーズ（90 秒・9 区間）全体を区間の和で出した値：(10万+…+90万) ÷ (90 秒 − 1 秒)。保存前の照合に使われる
+            foreach (['A', 'B'] as $k) {
+                $data[$k]['phases'][0]['summary']['partyRdps'] = 4500000 / 89;
+            }
+        }
         $this->mock(FFLogsService::class, function ($mock) {
             $mock->shouldReceive('parseUrl')->andReturn(['code' => 'FixtureA', 'fightId' => 1], ['code' => 'FixtureB', 'fightId' => 1]);
             $mock->shouldReceive('getMasterData')->andReturn(null); // 参加者表を取れない
@@ -124,6 +130,8 @@ class CompareShareTest extends TestCase
         $this->assertEqualsWithDelta(600000 / 29, $wide['a']['partyRdps'], 0.01);
 
         $this->getJson($share['url'] . '/range?phase=9&t0=0&t1=20')->assertStatus(422);
+        // フェーズ（90 秒）の終わりより後だけを選んだら、末尾の区間を拾わない
+        $this->getJson($share['url'] . '/range?phase=1&t0=89.5&t1=120')->assertStatus(422);
         $this->getJson($share['url'] . '/range?phase=1&t0=20&t1=20')->assertStatus(422);
         Http::assertNothingSent();
     }
@@ -227,5 +235,17 @@ class CompareShareTest extends TestCase
         $this->assertStringContainsString('rangeIndex', $plaintext);
         $this->assertStringContainsString('PLD(A)', $plaintext);
         $this->assertStringNotContainsString(self::REAL_NAME, $plaintext);
+    }
+
+    #[Test]
+    public function buckets_that_do_not_add_up_to_the_phase_are_not_kept(): void
+    {
+        $this->fakeBuckets(matchPhase: false);
+        $resultUrl = $this->credentials()->post('/compare', ['url_a' => 'a', 'url_b' => 'b'])->assertStatus(303)->headers->get('Location');
+        $share = $this->credentials()->postJson(route('timeline-shares.store'), ['draft' => basename($resultUrl)])->assertOk()->json();
+        $plaintext = Crypt::decryptString(Storage::disk('local')->get(Storage::disk('local')->files('timeline-shares')[0]));
+        $this->assertStringNotContainsString('rangeIndex', $plaintext);
+        $this->flushSession();
+        $this->get($share['url'])->assertOk()->assertSee('const RANGE_MODE = "none"', false);
     }
 }

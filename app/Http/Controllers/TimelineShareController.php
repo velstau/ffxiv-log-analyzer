@@ -66,15 +66,16 @@ class TimelineShareController extends Controller
      */
     public function range(Request $request, string $id, TimelineShareStore $shares, ReportComparer $comparer)
     {
-        $snapshot = $shares->find($id);
-        if (!$snapshot || TimelineShareStore::kindOf($snapshot) !== 'compare') {
-            return response()->json(['error' => '共有が見つかりません。'], 404);
-        }
+        // 共有ファイルの復号は重いので、パラメータを先に確かめる
         $pid = (string) $request->query('phase', '');
         $t0 = (float) $request->query('t0', 0);
         $t1 = (float) $request->query('t1', 0);
         if (!preg_match('/\A[0-9]{1,3}\z/', $pid) || $t0 < 0 || $t1 - $t0 < 1) {
             return response()->json(['error' => 'パラメータが不正です。'], 422);
+        }
+        $snapshot = $shares->find($id);
+        if (!$snapshot || TimelineShareStore::kindOf($snapshot) !== 'compare') {
+            return response()->json(['error' => '共有が見つかりません。'], 404);
         }
 
         $out = [];
@@ -91,7 +92,7 @@ class TimelineShareController extends Controller
             }
         }
         if (!$indexed) {
-            return response()->json(['error' => 'この共有には範囲の再集計用のデータがありません（作り直すと対応します）。'], 409);
+            return response()->json(['error' => 'この共有には範囲の再集計用のデータがありません。'], 409);
         }
         if (!$out) {
             return response()->json(['error' => '選択範囲がどちらのフェーズにも掛かっていません。'], 422);

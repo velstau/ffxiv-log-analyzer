@@ -36,6 +36,8 @@ class ReportComparer
 
     /** フェーズ内 rDPS推移グラフのバケット幅（秒）。 */
     private const SERIES_BUCKET_SEC = 10.0;
+    /** 共有の範囲再集計で取り置く 10 秒区間の上限（片側） */
+    private const RANGE_MAX_BUCKETS = 720;
 
     /** 末尾バケットがこの秒数未満なら手前のバケットに併合する（数秒間の値はスパイクになり意味が薄い）。 */
     private const SERIES_TAIL_MIN_SEC = 4.0;
@@ -217,6 +219,7 @@ class ReportComparer
             $laggards[] = [
                 'job' => $lp['job'], 'name' => $lp['name'], 'anon' => !empty($lp['anon']), 'delta' => $delta, 'approx' => $p['role'],
                 'lowActive' => (float) ($lp['activePct'] ?? 0), 'hiActive' => (float) ($hp['activePct'] ?? 0),
+                'activeEstimated' => !empty($lp['activeEstimated']) || !empty($hp['activeEstimated']),
                 'lowPotion' => !empty($lp['potion']), 'hiPotion' => !empty($hp['potion']),
                 'lowDeaths' => (int) ($lp['deathsHarm'] ?? 0), 'hiDeaths' => (int) ($hp['deathsHarm'] ?? 0),
                 'lowDd' => (float) ($lp['ddSec'] ?? 0), 'hiDd' => (float) ($hp['ddSec'] ?? 0),
@@ -263,7 +266,8 @@ class ReportComparer
             if ($lg['lowDd'] >= 5.0 && $lg['lowDd'] - $lg['hiDd'] >= 3.0) {
                 $reasons[] = "ダメージ低下デバフ " . round($lg['lowDd']) . "秒（ギミックミス被弾）";
             }
-            if ($lg['hiActive'] - $lg['lowActive'] >= 2.0) {
+            // 共有の範囲集計の稼働率は推定なので、行動の差として言い切らない
+            if (!$lg['activeEstimated'] && $lg['hiActive'] - $lg['lowActive'] >= 2.0) {
                 $reasons[] = "稼働率 {$fmt($lg['lowActive'])}% ＜ 相手 {$fmt($lg['hiActive'])}%（手が止まっている可能性）";
             }
             if ($lg['hiPotion'] && !$lg['lowPotion']) {
@@ -315,8 +319,14 @@ class ReportComparer
         $actors = collect($master['actors'] ?? [])->keyBy('id');
         $abilities = collect($master['abilities'] ?? [])->keyBy('gameID');
 
-        // 想定ダメージ算出の素材（薬・死亡・与ダメ低下デバフ）をまとめて収集
+        // 想定ダメージ算出の素材（薬・死亡・与ダメ低下デバフ）をまとめて収集。
+        // 範囲の再集計・共有の取り置きでも使うので、lossContext と同じキーで残す
         $loss = $this->buildLossContext($code, $fightId, $st, $et, $actors, $abilities);
+        try {
+            Cache::put("fflogs:losscontext:{$code}:{$fightId}", $loss, 1800);
+        } catch (\Throwable $e) {
+            Log::warning("Cache write failed (fflogs:losscontext:{$code}:{$fightId}): " . $e->getMessage());
+        }
         $potionByPlayer = $loss['potionByPlayer'];
         $potionIconByPlayer = $loss['potionIconByPlayer'];
         $deathsByPlayer = $loss['deathsByPlayer'];
@@ -959,15 +969,21 @@ class ReportComparer
      */
     public function withRangeIndex(array $data): array
     {
+        // 片側だけだと、欠けた側を「フェーズが短い」と取り違えて見せるので、両側そろったときだけ足す
+        $built = [];
         foreach (['A', 'B'] as $k) {
-            if (empty($data[$k]['code']) || empty($data[$k]['fightId']) || isset($data[$k]['rangeIndex'])) {
-                continue;
+            if (empty($data[$k]['code']) || empty($data[$k]['fightId'])) {
+                return $data;
             }
             try {
-                $data[$k]['rangeIndex'] = $this->buildRangeIndex($data[$k], !empty($data['hideNames']), $k);
+                $built[$k] = $this->buildRangeIndex($data[$k], !empty($data['hideNames']), $k);
             } catch (\Throwable $e) {
-                Log::warning('Compare range index failed: ' . $e::class);
+                Log::warning('Compare range index failed: ' . $e::class . ' ' . $e->getMessage());
+                return $data;
             }
+        }
+        foreach ($built as $k => $index) {
+            $data[$k]['rangeIndex'] = $index;
         }
         return $data;
     }
@@ -1002,6 +1018,10 @@ class ReportComparer
                 $windows[] = [$s, min((float) $ph['endMs'], $s + $bucketMs)];
                 $owners[] = $ph['id'];
             }
+        }
+        // 区間が多すぎる戦闘（2 時間超）は取り置かない（共有ファイルと閲覧時の展開を大きくしすぎない）
+        if (count($windows) > self::RANGE_MAX_BUCKETS) {
+            throw new \RuntimeException('Too many range buckets.');
         }
         $tables = $this->fflogs->getDamageTables($code, $fightId, $windows);
 
@@ -1077,6 +1097,24 @@ class ReportComparer
             }
             unset($p);
         }
+
+        // 加算の決まり（2026-10-27 の実測）が崩れていないか、フェーズ全体を区間の和で出してフェーズカードと照合する。
+        // 名前（別名）がそろわない・パーティ計が 1% 以上ずれるなら、取り置きを使わない（概算だけの共有にする）
+        foreach ($side['phases'] as $ph) {
+            $want = $ph['summary'] ?? null;
+            if (!$want || empty($want['players'])) {
+                continue;
+            }
+            $got = $this->summarizeStoredWindow($index, $ph['id'], 0, ($ph['endMs'] - $ph['startMs']) / 1000);
+            $wantNames = array_column($want['players'], 'name');
+            $gotNames = array_column($got['players'] ?? [], 'name');
+            sort($wantNames);
+            sort($gotNames);
+            $wantRdps = (float) ($want['partyRdps'] ?? 0);
+            if ($wantNames !== $gotNames || $wantRdps <= 0 || abs(($got['partyRdps'] ?? 0) - $wantRdps) / $wantRdps > 0.01) {
+                throw new \RuntimeException("Range buckets do not match phase {$ph['id']}.");
+            }
+        }
         return $index;
     }
 
@@ -1091,6 +1129,10 @@ class ReportComparer
             return null;
         }
         $n = count($ph['buckets']);
+        // フェーズの終わりより後だけを選んだときは、末尾の区間を拾わない（一時結果の範囲集計と同じく対象外）
+        if ($t0 > ($ph['end'] - $ph['start']) / 1000 - 1) {
+            return null;
+        }
         $i0 = max(0, (int) floor($t0 / self::SERIES_BUCKET_SEC));
         $i1 = min($n, (int) ceil($t1 / self::SERIES_BUCKET_SEC));
         if ($i1 <= $i0) {
@@ -1131,6 +1173,10 @@ class ReportComparer
             }
             unset($p);
         }
+        foreach ($summary['players'] as &$p) {
+            $p['activeEstimated'] = true;
+        }
+        unset($p);
         $summary['win'] = [$i0 * self::SERIES_BUCKET_SEC, round(($end - $ph['start']) / 1000, 1)];
         $summary['activeEstimated'] = true;
         return $summary;

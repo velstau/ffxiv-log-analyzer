@@ -37,9 +37,9 @@ Route::get('/icons/abilities/{file}', [IconController::class, 'abilityIcon'])->w
 Route::get('/icons/jobs/{file}', [IconController::class, 'jobIcon'])->where('file', '[a-z0-9]+\.png');
 
 // Saved analysis: readers never need FFLogs credentials or trigger a new API request.
-Route::post('/timeline-shares', [TimelineShareController::class, 'store'])->middleware('throttle:10,1')->name('timeline-shares.store');
+Route::post('/timeline-shares', [TimelineShareController::class, 'store'])->middleware('throttle:10,1,share-create')->name('timeline-shares.store');
 Route::get('/shared/{id}', [TimelineShareController::class, 'show'])->where('id', '[A-Za-z0-9]{48}')->name('timeline-shares.show');
-Route::get('/shared/{id}/range', [TimelineShareController::class, 'range'])->where('id', '[A-Za-z0-9]{48}')->middleware('throttle:60,1')->name('timeline-shares.range');
+Route::get('/shared/{id}/range', [TimelineShareController::class, 'range'])->where('id', '[A-Za-z0-9]{48}')->middleware('throttle:60,1,share-range')->name('timeline-shares.range');
 Route::post('/shared/{id}/delete', [TimelineShareController::class, 'destroy'])->where('id', '[A-Za-z0-9]{48}')->name('timeline-shares.destroy');
 
 // Private two-hour result: reloads use the server snapshot, never FFLogs.

@@ -932,7 +932,8 @@
                     const box = panel.querySelector('.ts-detail');
                     if (!box) return;
                     if (!CAN_REFETCH) {
-                        box.innerHTML = '<span class="text-warning text-base">この共有は範囲の再集計に対応する前に作られたため、範囲の個人別rDPSは出せません（パーティ計は概算値です）。作成者が共有を作り直すと対応します。</span>';
+                        box.innerHTML = '<span class="text-warning text-base">この共有には範囲の再集計用のデータがないため、範囲の個人別rDPSは出せません（パーティ計は概算値です）。' +
+                            '2026-10-27 より前に作られた共有か、作成時に FFLogs から取得できなかった共有です。作成者が比較をやり直して共有を作り直すと出せます。</span>';
                         return;
                     }
                     box.innerHTML = '<span class="text-secondary text-base">' + (RANGE_MODE === 'shared' ? '再集計中…' : 'FFLogsで再集計中…') + '</span>';
@@ -993,7 +994,7 @@
                     applyCard(res, fmtT(shown.t0) + '–' + fmtT(shown.t1));
                     if (RANGE_MODE === 'shared') {
                         html += '<div class="ts-note">共有では、作成時に取り置いた10秒ごとの集計から出しています（範囲は ' + fmtT(shown.t0) + '–' + fmtT(shown.t1) +
-                            ' に丸めました）。rDPS・総ダメージはFFLogsと同じ値、Active%（稼働率）は推定です。</div>';
+                            ' に丸めました）。rDPS・総ダメージはFFLogsと同じ値、Active%（稼働率）は推定です（稼働率の差による助言は出しません）。</div>';
                     }
                     html += '<div class="ts-note text-yellow">↓ このフェーズのカード（パーティ計・不足側の分析・ロールペア別・個人別）を選択範囲の値に置き換えました。「解除」かダブルクリックで元に戻ります。</div>';
 

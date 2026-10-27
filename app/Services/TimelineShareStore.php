@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Exceptions\TimelineShareLimitReached;
+use Illuminate\Contracts\Cache\LockTimeoutException;
 use Illuminate\Contracts\Encryption\DecryptException;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Cache;
@@ -55,6 +56,18 @@ class TimelineShareStore
         }
         // 同じ解析結果からは同じ共有を返す（作り直しでファイルを増やさない）
         $draftKey = hash('sha256', $draft);
+        // DPS 比較は保存前の取り置き（$prepare）に数秒かかる。その間に同じ結果から 2 本作らないよう、
+        // 同じ下書きの作成は 1 本ずつ通す（後から来た方は、先の共有を重複判定で受け取る）
+        try {
+            return Cache::lock('timeline-share-publish:' . $draftKey, 120)
+                ->block(100, fn() => $this->publishOnce($data, $draftKey, $prepare));
+        } catch (LockTimeoutException $e) {
+            throw new RuntimeException('Timed out waiting for another share of the same result.');
+        }
+    }
+
+    private function publishOnce(array $data, string $draftKey, ?callable $prepare): array
+    {
         $owned = array_filter($this->activeMeta(), fn($meta) => $meta['owner'] === $data['owner']);
         foreach ($owned as $existing => $meta) {
             if ($meta['draft'] === $draftKey) {

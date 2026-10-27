@@ -435,17 +435,24 @@ GQL;
      *
      * @param  array<int, array{0: float, 1: float}> $windows [[開始ms, 終了ms], ...]
      * @return array<int, array> $windows と同じ並びの getDamageTable と同じ形。取れなければ例外
+     *
+     * 共有の作成を待たせすぎないよう、全体で $budgetSec 秒を超えたら打ち切って例外にする
+     * （呼び出し側は取り置きなしで共有を作る。nginx の待ち時間は 120 秒）。
      */
-    public function getDamageTables($code, $fightId, array $windows): array
+    public function getDamageTables($code, $fightId, array $windows, int $budgetSec = 60): array
     {
         $out = [];
+        $deadline = microtime(true) + $budgetSec;
         foreach (array_chunk($windows, 30, true) as $chunk) {
+            if (microtime(true) > $deadline) {
+                throw new \RuntimeException('FFLogs の集計表の取得が時間内に終わりませんでした。');
+            }
             $parts = [];
             foreach ($chunk as $i => [$s, $e]) {
                 $parts[] = sprintf('t%d: table(dataType: DamageDone, fightIDs: [$f], startTime: %.0F, endTime: %.0F)', $i, $s, $e);
             }
             $query = 'query($c: String!, $f: Int!) { reportData { report(code: $c) { ' . implode(' ', $parts) . ' } } }';
-            $response = Http::timeout(60)->withToken($this->getToken())->post($this->apiUrl, [
+            $response = Http::timeout(15)->withToken($this->getToken())->post($this->apiUrl, [
                 'query' => $query,
                 'variables' => ['c' => $code, 'f' => (int) $fightId],
             ]);
