@@ -112,6 +112,14 @@
         .ts-atk { margin-top: 5px; font-size:1rem; line-height: 1.5; color: #d1d5db; }
         .ts-atk .atk { display: inline-block; background: rgba(245,158,11,.14); border: 1px solid rgba(245,158,11,.35);
             border-radius: 3px; padding: 0 5px; margin: 1px 3px 1px 0; white-space: nowrap; }
+        /* 範囲を選んでカードを差し替えている間の目印。範囲で集計し直していない欄は薄くする */
+        .ph-range:empty { display: none; }
+        .ph-range { display: inline-block; font-size: 1rem; font-weight: 700; color: #111827; background: #fde047;
+            border-radius: 4px; padding: 1px 8px; margin-left: 6px; vertical-align: middle; }
+        .ph-scope-note { display: none; color: #fcd34d; font-size: 1rem; margin-bottom: 4px; }
+        .phase-card.range-active .ph-scope-note { display: block; }
+        .phase-card.range-active .phase-scope { opacity: .45; }
+        .phase-card.range-active { box-shadow: inset 0 0 0 2px rgba(253,224,71,.55); }
         .ts-atk .atk .t { color: #94a3b8; font-family: monospace; font-size:1rem; margin-right: 3px; }
         /* 暗い背景で読みにくかった青・赤・見出しを明るくする（Tabler の既定はコントラスト 3.2〜3.6:1） */
         .comparison-page h1.text-primary, .comparison-page h2.text-primary { color: #6ea8fe !important; }
@@ -337,17 +345,18 @@
                 <div class="phase-card bg-surface rounded legacy-p-3 legacy-mb-3" data-pid="{{ $pid }}" id="phase-{{ $pid }}">
                     <div class="phase-head legacy-flex legacy-items-center legacy-justify-between legacy-gap-3 legacy-mb-2">
                         <div class="fw-bold text-yellow fs-3 legacy-shrink-0">Phase {{ $pid }}
+                            <span class="ph-range"></span>
                             <button type="button" class="btn btn-sm shot-btn" title="このフェーズを画像として保存">画像保存</button>
                         </div>
                         {{-- パーティ計（1行コンパクト） --}}
-                        <div class="phase-party legacy-flex-1 legacy-flex legacy-items-center legacy-gap-2 text-base">
+                        <div class="phase-party legacy-flex-1 legacy-flex legacy-items-center legacy-gap-2 text-base" data-a="{{ $as ? $ard : '' }}" data-b="{{ $bs ? $brd : '' }}">
                             <span class="text-blue font-monospace legacy-shrink-0">A {{ $as ? $fmt($ard) : '—' }}</span>
                             <div class="bar-track legacy-flex-1"><div class="bar-a" style="width: {{ $paw }}%"></div></div>
                             <span class="text-secondary legacy-shrink-0">計rDPS</span>
                             <div class="bar-track legacy-flex-1"><div class="bar-b" style="width: {{ $pbw }}%"></div></div>
                             <span class="text-red font-monospace legacy-shrink-0">B {{ $bs ? $fmt($brd) : '—' }}</span>
                         </div>
-                        <div class="text-base text-secondary legacy-shrink-0 text-end">差 {!! $diffSpan($brd - $ard) !!}
+                        <div class="ph-diff text-base text-secondary legacy-shrink-0 text-end">差 {!! $diffSpan($brd - $ard) !!}
                             @php
                                 $aPr = $aPhase[$pid]['summary']['partyPotentialRdps'] ?? $ard;
                                 $bPr = $bPhase[$pid]['summary']['partyPotentialRdps'] ?? $brd;
@@ -357,17 +366,18 @@
                             @endif
                         </div>
                     </div>
+                    <div class="ph-scope-note">選択範囲を集計し直したのは、パーティ計・不足側の分析・ロールペア別・個人別です。薬・クローズドポジション・敵別ダメージはフェーズ全体の値のままです。</div>
                     @php $apg = $aPhase[$pid]['potionGainDps'] ?? 0; $bpg = $bPhase[$pid]['potionGainDps'] ?? 0; @endphp
                     @if ($apg > 0 || $bpg > 0)
-                        <div class="text-base text-yellow legacy-mb-1 text-end">薬の推定上乗せ：A +{{ $fmt($apg) }} ／ B +{{ $fmt($bpg) }} DPS相当</div>
+                        <div class="phase-scope text-base text-yellow legacy-mb-1 text-end">薬の推定上乗せ：A +{{ $fmt($apg) }} ／ B +{{ $fmt($bpg) }} DPS相当</div>
                     @endif
-                    <div class="text-base text-secondary legacy-mb-1">💃 クローズドポジション付与先
+                    <div class="phase-scope text-base text-secondary legacy-mb-1">💃 クローズドポジション付与先
                         <span class="text-blue">A</span>: {!! $cpFmt($aPhase[$pid]['closedPos'] ?? []) !!}　／
                         <span class="text-red">B</span>: {!! $cpFmt($bPhase[$pid]['closedPos'] ?? []) !!}</div>
 
                     {{-- 敵別（ボス別）ダメージ：このフェーズで各敵にどれだけ入れたか --}}
                     @if (!empty($aPhase[$pid]['enemies']) || !empty($bPhase[$pid]['enemies']))
-                        <div class="legacy-mb-2">
+                        <div class="phase-scope legacy-mb-2">
                             <div class="text-base fw-bold text-body legacy-mb-1">🎯 敵別ダメージ（このフェーズ）</div>
                             @include('fflogs._compare_enemies', ['aEnemies' => $aPhase[$pid]['enemies'] ?? [], 'bEnemies' => $bPhase[$pid]['enemies'] ?? []])
                         </div>
@@ -402,11 +412,14 @@
                         </div>
                     @endif
 
-                    {{-- 不足側アドバイス／ロールペア別／個人別ミラーバー（範囲選択時と共通のパーシャル） --}}
-                    @include('fflogs._compare_blocks', [
-                        'aList' => $aList, 'bList' => $bList,
-                        'adv' => $advice[$pid] ?? null, 'scope' => 'このフェーズ',
-                    ])
+                    {{-- 不足側アドバイス／ロールペア別／個人別ミラーバー（範囲選択時と共通のパーシャル）。
+                         グラフで範囲を選ぶと、中身を範囲の再集計結果に差し替える（解除で戻す） --}}
+                    <div class="phase-blocks">
+                        @include('fflogs._compare_blocks', [
+                            'aList' => $aList, 'bList' => $bList,
+                            'adv' => $advice[$pid] ?? null, 'scope' => 'このフェーズ',
+                        ])
+                    </div>
                 </div>
             @endforeach
         </section>
@@ -487,6 +500,7 @@
             document.addEventListener('toggle', fitBarLabels, true);
             if (document.fonts && document.fonts.ready) document.fonts.ready.then(fitBarLabels);
             fitBarLabels();
+            window.fitBarLabels = fitBarLabels; // 範囲選択でカードを差し替えたあとにも呼ぶ
         })();
     </script>
 
@@ -624,6 +638,16 @@
                 const EA = read('ea') || [], EB = read('eb') || [];
                 const SRC = read('src') || {};
                 const panel = cv.closest('.ts-wrap').querySelector('.ts-panel');
+                // 範囲の再集計結果で差し替えるフェーズカードの欄（解除で戻すため、元の中身を控えておく）
+                const card = cv.closest('.phase-card');
+                const cardParts = {
+                    party: card.querySelector('.phase-party'),
+                    diff: card.querySelector('.ph-diff'),
+                    blocks: card.querySelector('.phase-blocks'),
+                };
+                const cardOrig = {};
+                Object.keys(cardParts).forEach(k => { cardOrig[k] = cardParts[k] ? cardParts[k].innerHTML : ''; });
+                const cardBadge = card.querySelector('.ph-range');
 
                 // 線形時間軸：実時間に比例した位置に点を打つ（A/Bでフェーズ長・端数終端が違っても歪まない）
                 const toXY = arr => arr.map(p => ({ x: p.t, y: p.v }));
@@ -733,7 +757,47 @@
                 function clearSel() {
                     chart.$sel = null;
                     panel.innerHTML = '';
+                    restoreCard();
                     chart.render();
+                }
+
+                /** フェーズカードを範囲の再集計結果に差し替える（見出しのパーティ計・差と、下の3ブロック） */
+                function applyCard(res, label) {
+                    const a = res.a ? res.a.partyRdps : null, b = res.b ? res.b.partyRdps : null;
+                    if (cardParts.party) cardParts.party.innerHTML = partyHtml(a, b);
+                    if (cardParts.diff) cardParts.diff.innerHTML = diffHtml(a, b, res);
+                    if (cardParts.blocks) cardParts.blocks.innerHTML = res.html || '';
+                    if (cardBadge) cardBadge.textContent = '選択範囲 ' + label;
+                    card.classList.add('range-active');
+                    if (window.fitBarLabels) window.fitBarLabels();
+                }
+                function restoreCard() {
+                    if (!card.classList.contains('range-active')) return;
+                    Object.keys(cardParts).forEach(k => { if (cardParts[k]) cardParts[k].innerHTML = cardOrig[k]; });
+                    if (cardBadge) cardBadge.textContent = '';
+                    card.classList.remove('range-active');
+                    if (window.fitBarLabels) window.fitBarLabels();
+                }
+                // 見出しの1行。Blade 側（.phase-party・.ph-diff）と同じ形で組む
+                function partyHtml(a, b) {
+                    const m = Math.max(a || 0, b || 0, 1);
+                    return '<span class="text-blue font-monospace legacy-shrink-0">A ' + (a != null ? nf(a) : '—') + '</span> ' +
+                        '<div class="bar-track legacy-flex-1"><div class="bar-a" style="width: ' + Math.round((a || 0) / m * 100) + '%"></div></div> ' +
+                        '<span class="text-secondary legacy-shrink-0">計rDPS</span> ' +
+                        '<div class="bar-track legacy-flex-1"><div class="bar-b" style="width: ' + Math.round((b || 0) / m * 100) + '%"></div></div> ' +
+                        '<span class="text-red font-monospace legacy-shrink-0">B ' + (b != null ? nf(b) : '—') + '</span>';
+                }
+                function diffSpan(d) {
+                    const cls = d > 0 ? 'text-red' : d < 0 ? 'text-blue' : 'text-secondary';
+                    return '<span class="' + cls + ' font-monospace">' + (d > 0 ? '+' : '') + nf(d) + '</span>';
+                }
+                function diffHtml(a, b, res) {
+                    let h = '差 ' + diffSpan((b || 0) - (a || 0));
+                    const ap = res.a ? res.a.partyPotentialRdps : null, bp = res.b ? res.b.partyPotentialRdps : null;
+                    if (a != null && b != null && ap != null && bp != null && (ap > a * 1.005 || bp > b * 1.005)) {
+                        h += '<div title="想定rDPS（死亡・衰弱・ダメ低下が無い場合）同士の差 B−A"><span class="pot-diff">想定 ' + diffSpan(bp - ap) + '</span></div>';
+                    }
+                    return h;
                 }
                 function zoomTo(t0, t1) {
                     chart.options.scales.x.min = Math.max(baseMin, t0 - 2);
@@ -757,6 +821,7 @@
 
                 function renderPanel() {
                     const sel = chart.$sel;
+                    restoreCard(); // 前の範囲の値をカードに残さない（新しい範囲の結果が届いたら差し替える）
                     if (!sel) { panel.innerHTML = ''; return; }
                     const { t0, t1 } = sel;
                     const ra = rangeRdps(A1, t0, t1), rb = rangeRdps(B1, t0, t1);
@@ -877,7 +942,7 @@
                     } catch (e) {
                         res = { error: e.message };
                     }
-                    if (seq !== reqSeq) return; // ドラッグし直された：古い応答は捨てる
+                    if (seq !== reqSeq || !chart.$sel) return; // ドラッグし直された・解除された：古い応答は捨てる
                     if (!res || res.error) {
                         box.innerHTML = '<span class="text-red text-base">再集計に失敗しました（' + esc((res && res.error) || '不明') + '）</span>' +
                             ' <button type="button" class="btn ts-btn" data-act="retry">再取得</button>';
@@ -904,8 +969,9 @@
                     }
 
                     // 3ブロック（不足側アドバイス／ロールペア別／個人別ミラーバー）は
-                    // フェーズカードと同じ Blade パーシャルをサーバ側で描画したもの。JSでは組み立てない。
-                    html += res.html || '';
+                    // フェーズカードと同じ Blade パーシャルをサーバ側で描画したもの。JSでは組み立てず、カードの元の欄と入れ替える。
+                    applyCard(res, fmtT(t0) + '–' + fmtT(t1));
+                    html += '<div class="ts-note text-yellow">↓ このフェーズのカード（パーティ計・不足側の分析・ロールペア別・個人別）を選択範囲の値に置き換えました。「解除」かダブルクリックで元に戻ります。</div>';
 
                     const secs = [res.a, res.b].filter(Boolean).map(x => nf(x.combatSec) + 's').join(' / ');
                     html += '<div class="ts-note">rDPSの分母はFFLogsと同じ「ボスが攻撃可能だった実時間」（この範囲では ' + esc(secs) +

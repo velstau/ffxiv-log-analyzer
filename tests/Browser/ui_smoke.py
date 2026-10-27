@@ -3,6 +3,7 @@ Usage: python3 tests/Browser/ui_smoke.py http://172.24.0.2:8101/ff14tools/partys
 Requires Playwright Python and Chrome. Set UI_SCREENSHOTS for artifact output.
 """
 import json
+import re
 import os
 from pathlib import Path
 import sys
@@ -116,8 +117,19 @@ with sync_playwright() as pw:
     page.mouse.move(geometry['x'], geometry['y'])
     page.mouse.down()
     page.mouse.move(geometry['x2'], geometry['y'], steps=15)
+    card = page.locator('.phase-card').first
+    original_head = card.locator('.phase-party').inner_text()
     page.mouse.up()
-    expect(page.locator('.ts-panel').first).to_contain_text('Fixture range result')
+    # The range result replaces the phase card (party totals and blocks) and the card goes back on clear.
+    expect(card.locator('.phase-blocks')).to_contain_text('Fixture range result')
+    expect(card.locator('.phase-party')).to_contain_text('A 120,000')
+    expect(card.locator('.ph-range')).to_contain_text('選択範囲 0:10')
+    expect(card).to_have_class(re.compile('range-active'))
+    page.screenshot(path=str(OUT / 'compare-range-1440.png'), full_page=False)
+    page.locator('.ts-panel').first.get_by_role('button', name='解除').click()
+    expect(card.locator('.phase-party')).to_have_text(original_head)
+    expect(card.locator('.phase-blocks')).not_to_contain_text('Fixture range result')
+    expect(card.locator('.ph-range')).to_be_empty()
     assert requests and '/ff14tools/partyscope/compare/range?' in requests[0]
     assert 'anon=1' not in requests[0]
     expect(page.get_by_role('button', name='URLで共有')).to_be_visible()
@@ -133,7 +145,7 @@ with sync_playwright() as pw:
     page.mouse.down()
     page.mouse.move(geometry['x2'], geometry['y'], steps=15)
     page.mouse.up()
-    expect(page.locator('.ts-panel').first).to_contain_text('Fixture range result')
+    expect(page.locator('.phase-card .phase-blocks').first).to_contain_text('Fixture range result')
     assert 'anon=1' in requests[-1]
     assert not errors, errors
     print(json.dumps({'result': 'PASS', 'viewports': [1440, 390, 320], 'range_requests': len(requests), 'browser_errors': errors, 'artifacts': str(OUT)}, ensure_ascii=False))
