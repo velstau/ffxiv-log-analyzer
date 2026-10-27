@@ -64,13 +64,15 @@ class ApiKeyController extends Controller
 
         return redirect()->to($this->safeReturn($returnTo) ?? route('api_key.edit'))
             ->withCookie($this->credentials->makeCookie($id, $secret, (bool) ($validated['remember'] ?? false)))
+            ->withCookie(FFLogsCredentialStore::forgetLegacyCookie($request->isSecure()))
             ->with('status', 'FFLogs API キーを設定しました。');
     }
 
-    public function destroy()
+    public function destroy(Request $request)
     {
         return redirect()->route('api_key.edit')
             ->withCookie($this->credentials->forgetCookie())
+            ->withCookie(FFLogsCredentialStore::forgetLegacyCookie($request->isSecure()))
             ->with('status', 'このブラウザから FFLogs API キーを削除しました。');
     }
 

@@ -22,6 +22,9 @@ class FFLogsCredentialStore
 {
     public const COOKIE = 'fflogs_api';
 
+    /** 2026-10-27 の改名前の配信パス。ここに残った Cookie は RedirectLegacyPath が新しいパスへ移す */
+    public const LEGACY_COOKIE_PATH = '/ff14tools/logs2timeline/';
+
     /** 「このブラウザに保存」を選んだときの保存期間（分） */
     public const REMEMBER_MINUTES = 60 * 24 * 30;
 
@@ -101,6 +104,17 @@ class FFLogsCredentialStore
     public function forgetCookie(): Cookie
     {
         return cookie()->forget(self::COOKIE, $this->cookiePath());
+    }
+
+    /**
+     * 改名前の URL（/ff14tools/logs2timeline/）に残っている Cookie を消す。
+     *
+     * 旧 URL を開くと RedirectLegacyPath が旧 Cookie を新しいパスへ付け直すので、新しい URL でキーを
+     * 変えたり消したりしたときに旧 Cookie が残っていると、あとで旧 URL を開いたときに古いキーが戻ってくる。
+     */
+    public static function forgetLegacyCookie(bool $secure): Cookie
+    {
+        return Cookie::create(self::COOKIE, null, 1, self::LEGACY_COOKIE_PATH, null, $secure, true, false, 'lax');
     }
 
     /** Client ID の末尾 4 文字だけを見せる（どのキーを設定したかの確認用） */
