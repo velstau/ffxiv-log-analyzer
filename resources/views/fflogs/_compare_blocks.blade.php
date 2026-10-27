@@ -139,8 +139,8 @@
                     <span class="text-secondary">—</span>
                 @endif
             </div>
-            <div class="bwrap a">@if ($agw > 0)@if ($agw < 25)<span class="gnum" title="{{ $potTitle($a) }}">{{ $fmtAmt($a['potentialTotal'] ?? 0) }}</span>@endif<div class="bar-ghost a" style="width: {{ $agw }}%" title="{{ $potTitle($a) }}">@if ($agw >= 25)▶{{ $fmtAmt($a['potentialTotal'] ?? 0) }}@endif</div>@endif<div class="bar-h a" style="width: {{ $aw }}%">@if ($a){{ $fmtAmt($a['total']) }}@endif</div></div>
-            <div class="bwrap b"><div class="bar-h b" style="width: {{ $bw }}%">@if ($b){{ $fmtAmt($b['total']) }}@endif</div>@if ($bgw > 0)<div class="bar-ghost b" style="width: {{ $bgw }}%" title="{{ $potTitle($b) }}">@if ($bgw >= 25){{ $fmtAmt($b['potentialTotal'] ?? 0) }}◀@endif</div>@if ($bgw < 25)<span class="gnum" title="{{ $potTitle($b) }}">{{ $fmtAmt($b['potentialTotal'] ?? 0) }}</span>@endif @endif</div>
+            <div class="bwrap a">@if ($agw > 0)@if ($agw < 25)<span class="gnum" title="{{ $potTitle($a) }}">{{ $fmtAmt($a['potentialTotal'] ?? 0) }}</span>@endif<div class="bar-ghost a" style="width: {{ $agw }}%" title="{{ $potTitle($a) }}">@if ($agw >= 25)▶{{ $fmtAmt($a['potentialTotal'] ?? 0) }}@endif</div>@endif<div class="bar-h a" style="width: {{ $aw }}%">@if ($a)<span class="bl">{{ $fmtAmt($a['total']) }}</span>@endif</div></div>
+            <div class="bwrap b"><div class="bar-h b" style="width: {{ $bw }}%">@if ($b)<span class="bl">{{ $fmtAmt($b['total']) }}</span>@endif</div>@if ($bgw > 0)<div class="bar-ghost b" style="width: {{ $bgw }}%" title="{{ $potTitle($b) }}">@if ($bgw >= 25){{ $fmtAmt($b['potentialTotal'] ?? 0) }}◀@endif</div>@if ($bgw < 25)<span class="gnum" title="{{ $potTitle($b) }}">{{ $fmtAmt($b['potentialTotal'] ?? 0) }}</span>@endif @endif</div>
             {{-- B：職アイコン＋フルネーム(Active%) / rDPS・DPS・aDPS --}}
             <div class="b-info">
                 @if ($b)

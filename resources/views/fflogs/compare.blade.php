@@ -26,6 +26,13 @@
         .bar-h { height: 100%; min-width: 2px; display: flex; align-items: center; color: #fff; font-size:1rem; font-family: monospace; padding: 0 4px; overflow: hidden; white-space: nowrap; }
         .bar-h.a { background: linear-gradient(90deg, #1d4ed8, #3b82f6); border-radius: 3px 0 0 3px; justify-content: flex-end; }
         .bar-h.b { background: linear-gradient(90deg, #f43f5e, #be123c); border-radius: 0 3px 3px 0; justify-content: flex-start; }
+        /* 総ダメージがバーに収まらないときは、バーのすぐ外側に出す（JS の fitBarLabels が .out を付ける） */
+        .bar-h { position: relative; }
+        .bar-h.out { overflow: visible; }
+        .bar-h.out .bl { position: absolute; top: 50%; transform: translateY(-50%); z-index: 1; padding: 0 3px; line-height: 1.15rem;
+            background: rgba(15,23,42,.85); border-radius: 3px; }
+        .bar-h.a.out .bl { right: 100%; }
+        .bar-h.b.out .bl { left: 100%; }
         /* 想定ダメージ（死亡・衰弱・ダメ低下が無かった場合）のゴースト延長バー：斜線＋点線枠で「推定」を明示 */
         .bar-ghost { height: 100%; box-sizing: border-box; display: flex; align-items: center;
             font-size:1rem; font-family: monospace; color: #e2e8f0; padding: 0 3px;
@@ -444,6 +451,44 @@
             })();
         </script>
     @endif
+
+    {{-- バー上の数値が入りきらないとき：総ダメージはバーの外へ、想定値はゴーストの外（gnum）へ出す。幅が変わるたびにやり直す --}}
+    <script>
+        (function () {
+            const textWidth = el => { const r = document.createRange(); r.selectNodeContents(el); return r.getBoundingClientRect().width; };
+            function fitBarLabels() {
+                document.querySelectorAll('.gnum.js-moved').forEach(g => g.remove());
+                document.querySelectorAll('.bar-ghost[data-text]').forEach(g => { g.textContent = g.dataset.text; g.removeAttribute('data-text'); });
+                document.querySelectorAll('.bar-h.out').forEach(b => b.classList.remove('out'));
+                document.querySelectorAll('.bwrap .gnum').forEach(g => { g.style.marginLeft = g.style.marginRight = ''; });
+                document.querySelectorAll('.bwrap').forEach(w => {
+                    const bar = w.querySelector('.bar-h'), bl = bar && bar.querySelector('.bl');
+                    if (!bl || !w.clientWidth) return; // 非表示の間は測れない（開いたときにやり直す）
+                    const out = textWidth(bl) + 8 > bar.clientWidth;
+                    bar.classList.toggle('out', out);
+                    const ghost = w.querySelector('.bar-ghost');
+                    const lw = out ? bl.getBoundingClientRect().width : 0;
+                    if (ghost && ghost.textContent.trim() && textWidth(ghost) + 8 + lw > ghost.clientWidth) {
+                        const g = document.createElement('span');
+                        g.className = 'gnum js-moved';
+                        g.title = ghost.title;
+                        g.textContent = ghost.textContent.replace(/[▶◀]/g, '');
+                        ghost.dataset.text = ghost.textContent;
+                        ghost.textContent = '';
+                        w.classList.contains('a') ? w.insertBefore(g, w.firstChild) : w.appendChild(g);
+                    }
+                    // 外に出した総ダメージがゴーストより長いときは、その先の想定値（gnum）を押し出して重ねない
+                    const gnum = w.querySelector('.gnum'), room = lw + 4 - (ghost ? ghost.getBoundingClientRect().width : 0);
+                    if (out && gnum && room > 0) gnum.style[w.classList.contains('a') ? 'marginRight' : 'marginLeft'] = room + 'px';
+                });
+            }
+            let t;
+            window.addEventListener('resize', () => { clearTimeout(t); t = setTimeout(fitBarLabels, 150); });
+            document.addEventListener('toggle', fitBarLabels, true);
+            if (document.fonts && document.fonts.ready) document.fonts.ready.then(fitBarLabels);
+            fitBarLabels();
+        })();
+    </script>
 
     {{-- フェーズカードの画像保存（modern-screenshotでカードをPNG化してダウンロード） --}}
     <script>
