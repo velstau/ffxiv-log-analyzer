@@ -113,6 +113,9 @@ with sync_playwright() as pw:
     expect(page.locator('form button[type=submit]')).to_be_disabled()
     expect(page.locator('form button[type=submit]')).to_contain_text('比較中')
     expect(page.locator('form .busy-status')).to_contain_text('経過 1 秒', timeout=3000)
+    page.keyboard.press('Escape')  # an aborted load must not leave the form stuck
+    expect(page.locator('form button[type=submit]')).to_be_enabled()
+    expect(page.locator('form .busy-status')).to_be_hidden()
 
     # Simulate the range API response only. The original URL and selection code run unchanged.
     requests = []

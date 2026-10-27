@@ -166,12 +166,19 @@
             form.dataset.sending = '1';
             var button = form.querySelector('button[type="submit"]');
             if (!button) return;
-            stops.push({ form: form, stop: window.LogsBusy.start(button, form.dataset.busyLabel, form.querySelector('.busy-status'), form.dataset.busyMessage || '') });
+            stops.push({ form: form, stop: window.LogsBusy.start(button, form.dataset.busyLabel, form.querySelector('.busy-status'),
+                (form.dataset.busyMessage || '') + '（やり直すときは Esc キーを押すか、入力を直してください）') });
         });
     });
-    // 戻るボタンでキャッシュから表示されたときは、処理中のままにしない
-    window.addEventListener('pageshow', function (event) {
-        if (!event.persisted) return;
+    function resetAll() {
         stops.splice(0).forEach(function (s) { s.stop(); delete s.form.dataset.sending; });
+    }
+    // 戻るボタンでキャッシュから表示されたときは、処理中のままにしない
+    window.addEventListener('pageshow', function (event) { if (event.persisted) resetAll(); });
+    // 読み込みの中断（Esc・停止ボタン）はイベントで分からない。Esc を押したとき・入力を直し始めたときは
+    // やり直すものとみなして、もう一度送信できるようにする
+    document.addEventListener('keydown', function (event) { if (event.key === 'Escape' && stops.length) resetAll(); });
+    document.addEventListener('input', function (event) {
+        if (stops.length && event.target.closest && event.target.closest('form[data-busy-label]')) resetAll();
     });
 })();
