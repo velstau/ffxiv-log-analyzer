@@ -4,14 +4,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>FFLogs Timeline Viewer</title>
+    <title>軽減・バリア解析 - Partyscope</title>
     @include('_ui_head')
 </head>
 
 <body class="logs-app">
     @include('_tool_nav')
     <div class="container-xl py-4">
-        <h1 class="fs-1 fw-bold legacy-mb-6 text-center text-primary">FFLogs Timeline Viewer</h1>
+        <h1 class="fs-1 fw-bold legacy-mb-6 text-center text-primary">軽減・バリア解析</h1>
 
         @include('fflogs._api_key_status')
 

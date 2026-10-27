@@ -2,6 +2,7 @@
 
 use App\Exceptions\FFLogsCredentialsProblem;
 use App\Http\Controllers\ApiKeyController;
+use App\Http\Middleware\RedirectLegacyPath;
 use App\Http\Middleware\RequireFFLogsCredentials;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
@@ -15,6 +16,8 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
+        // 旧名の URL（/ff14tools/logs2timeline/…）は、ルートを解決する前に新しい URL へ転送する
+        $middleware->prepend(RedirectLegacyPath::class);
         $middleware->alias([
             'fflogs.credentials' => RequireFFLogsCredentials::class,
         ]);

@@ -5,7 +5,7 @@
     @if ($isShared ?? false)<meta name="robots" content="noindex,nofollow,noarchive"><meta name="referrer" content="no-referrer">@endif
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Timeline - {{ $fight['name'] }}</title>
+    <title>{{ $fight['name'] }} - Partyscope</title>
     @include('_ui_head')
     <link href="{{ asset('css/timeline.css') }}?v={{ @filemtime(public_path('css/timeline.css')) }}" rel="stylesheet">
 </head>

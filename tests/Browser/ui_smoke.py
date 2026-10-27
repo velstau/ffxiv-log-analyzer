@@ -1,5 +1,5 @@
 """Chrome UI regression against router.php fixtures; never calls real FFLogs APIs.
-Usage: python3 tests/Browser/ui_smoke.py http://172.24.0.2:8101/ff14tools/logs2timeline
+Usage: python3 tests/Browser/ui_smoke.py http://172.24.0.2:8101/ff14tools/partyscope
 Requires Playwright Python and Chrome. Set UI_SCREENSHOTS for artifact output.
 """
 import json
@@ -9,7 +9,7 @@ import sys
 from playwright.sync_api import sync_playwright, expect
 
 BASE = sys.argv[1].rstrip('/')
-OUT = Path(os.environ.get('UI_SCREENSHOTS', '/tmp/logs2timeline-applied'))
+OUT = Path(os.environ.get('UI_SCREENSHOTS', '/tmp/partyscope-applied'))
 OUT.mkdir(parents=True, exist_ok=True)
 with sync_playwright() as pw:
     browser = pw.chromium.launch(executable_path='/usr/bin/google-chrome', args=['--no-sandbox', '--disable-dev-shm-usage', '--no-proxy-server'])
@@ -118,7 +118,7 @@ with sync_playwright() as pw:
     page.mouse.move(geometry['x2'], geometry['y'], steps=15)
     page.mouse.up()
     expect(page.locator('.ts-panel').first).to_contain_text('Fixture range result')
-    assert requests and '/ff14tools/logs2timeline/compare/range?' in requests[0]
+    assert requests and '/ff14tools/partyscope/compare/range?' in requests[0]
     assert 'anon=1' not in requests[0]
     expect(page.get_by_role('button', name='URLで共有')).to_be_visible()
 

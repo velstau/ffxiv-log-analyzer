@@ -55,8 +55,8 @@ modern-screenshotを軽減画面でも使用。全表とプレイヤー詳細の
 通常のPHP回帰テストとPER書式検査は既存のPHP 8.4コンテナ・www-dataで実行する。
 
 ```bash
-docker exec -u www-data -w /var/www/html/vel.works/ff14tools/logs2timeline php8.4 php artisan test
-docker exec -u www-data -w /var/www/html/vel.works/ff14tools/logs2timeline php8.4 vendor/bin/pint --test
+docker exec -u www-data -w /var/www/html/vel.works/ff14tools/partyscope php8.4 php artisan test
+docker exec -u www-data -w /var/www/html/vel.works/ff14tools/partyscope php8.4 vendor/bin/pint --test
 ```
 
 ブラウザ用フィクスチャはAPP_ENV=testingかつPHP組込サーバーでのみ動く。
@@ -64,15 +64,15 @@ docker exec -u www-data -w /var/www/html/vel.works/ff14tools/logs2timeline php8.
 セッション・キャッシュ・共有結果は専用のtesting/ui-browserフォルダに隔離。実際の認証キーを入力しない。
 
 ```bash
-docker exec -u www-data -e APP_ENV=testing -w /var/www/html/vel.works/ff14tools/logs2timeline php8.4 php -S 0.0.0.0:8101 tests/Browser/router.php
+docker exec -u www-data -e APP_ENV=testing -w /var/www/html/vel.works/ff14tools/partyscope php8.4 php -S 0.0.0.0:8101 tests/Browser/router.php
 # 別ターミナル。接続先IPは環境に合わせる。Playwright Python / Chromeが必要。
-python3 tests/Browser/ui_smoke.py http://172.24.0.2:8101/ff14tools/logs2timeline
+python3 tests/Browser/ui_smoke.py http://172.24.0.2:8101/ff14tools/partyscope
 ```
 
 幅1440/390/320pxの入口画面・結果画面、表の横スクロール、プレイヤー表示切替、
 フィルター・技/被ダメージ/プレイヤー詳細、PNG保存、PT構成の追加/上限/削除/クリア・ゾーン連動、
 DPS比較グラフのドラッグと範囲APIのURL・結果反映、ブラウザエラーを確認する。
-成果物は既定で `/tmp/logs2timeline-applied/` に保存。
+成果物は既定で `/tmp/partyscope-applied/` に保存。
 実キーでのログ解析、PTランキング取得・長時間ポーリング、大量イベントでの画像保存、
 外部画像がある実ログ・Safari/Firefoxは別途確認が必要。既存のHTTP/APIテストは実行する。
 

@@ -16,7 +16,7 @@ with sync_playwright() as pw:
     page.get_by_role('button', name='共有URLを作成する', exact=True).click()
     expect(page.locator('#timeline-share-url')).not_to_have_value('')
     url = page.locator('#timeline-share-url').input_value()
-    assert '/ff14tools/logs2timeline/shared/' in url, url
+    assert '/ff14tools/partyscope/shared/' in url, url
     assert not any(cookie['name'] == 'fflogs_api' for cookie in owner.cookies())
     guest = browser.new_context(viewport={'width': 390, 'height': 900}, accept_downloads=True)
     reader = guest.new_page()
@@ -38,8 +38,8 @@ with sync_playwright() as pw:
     expect(reader.locator('#timeline-share-url')).to_have_value(url)
     reader.get_by_role('button', name='コピー', exact=True).click()
     expect(reader.locator('#timeline-share-status')).to_contain_text('コピー')
-    Path('/tmp/logs2timeline-applied').mkdir(exist_ok=True)
-    reader.screenshot(path='/tmp/logs2timeline-applied/share-guest-390.png')
+    Path('/tmp/partyscope-applied').mkdir(exist_ok=True)
+    reader.screenshot(path='/tmp/partyscope-applied/share-guest-390.png')
     assert not errors, errors
     page.goto(url, wait_until='networkidle')
     page.get_by_role('button', name='共有URL・管理', exact=True).click()

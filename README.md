@@ -1,4 +1,4 @@
-# logs2tl（FFLogs ツール）
+# Partyscope（FFLogs 解析ツール。旧名 logs2tl / logs2timeline）
 
 FFLogs のログを読み解くための Web ツール集。FFLogs API v2（GraphQL）から戦闘ログを取得し、
 サイトのUIでは出せない切り口で集計・可視化する。

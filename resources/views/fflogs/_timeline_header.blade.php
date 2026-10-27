@@ -1,7 +1,7 @@
 <header class="timeline-toolbar border-bottom">
     <div class="analysis-topline">
         <div class="analysis-summary">
-            <a class="analysis-home text-secondary text-decoration-none" href="{{ route('home') }}" aria-label="FFLogs ツールのTOPへ">FFLogs ツール</a>
+            <a class="analysis-home text-secondary text-decoration-none" href="{{ route('home') }}" aria-label="PartyscopeのTOPへ">Partyscope</a>
             <span class="text-secondary" aria-hidden="true">／</span>
             <h1 class="m-0" title="軽減・バリア解析結果">{{ $fight['name'] }}</h1>
             <span class="text-secondary text-nowrap">戦闘時間 <strong class="text-body">{{ gmdate('i:s', ($fight['endTime'] - $fight['startTime']) / 1000) }}</strong></span>

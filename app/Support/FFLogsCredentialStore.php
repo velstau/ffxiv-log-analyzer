@@ -109,7 +109,7 @@ class FFLogsCredentialStore
         return '…' . mb_substr($id, -4);
     }
 
-    /** このアプリの配信パス（例: /ff14tools/logs2timeline/）にだけ Cookie を送らせる */
+    /** このアプリの配信パス（例: /ff14tools/partyscope/）にだけ Cookie を送らせる */
     private function cookiePath(): string
     {
         return rtrim(request()->getBasePath(), '/') . '/';

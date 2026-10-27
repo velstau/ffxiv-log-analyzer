@@ -7,7 +7,7 @@ if (PHP_SAPI !== 'cli-server' || getenv('APP_ENV') !== 'testing') {
 }
 
 $root = dirname(__DIR__, 2);
-$prefix = '/ff14tools/logs2timeline';
+$prefix = '/ff14tools/partyscope';
 $path = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
 // Match nginx's directory redirect when route() emits the base without a slash.
 if ($path === $prefix) {

@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>FFLogs API キーの設定 - FFLogs ツール</title>
+    <title>FFLogs API キーの設定 - Partyscope</title>
     @include('_ui_head')
 </head>
 

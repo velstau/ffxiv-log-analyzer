@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>A/B比較 - FFLogs</title>
+    <title>A/B比較 - Partyscope</title>
     @include('_ui_head')
 </head>
 

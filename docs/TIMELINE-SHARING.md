@@ -7,7 +7,7 @@
 3. 表示されたURLをコピーして相手に渡す。相手はAPIキーもログインも不要。
 4. 作成したブラウザで共有URLを開くと、「共有URL・管理」から共有を停止できる。
 
-URL形式は `/ff14tools/logs2timeline/shared/{48文字のランダムID}`。
+URL形式は `/ff14tools/partyscope/shared/{48文字のランダムID}`（2026-10-27 の改名前の `/ff14tools/logs2timeline/shared/…` は新しい URL へ転送する。`RedirectLegacyPath`）。
 既に開いていた古い結果ページにはボタンがないため、機能導入後に解析し直す。
 解析から2時間を過ぎた場合や準備データがキャッシュから消えた場合も再解析する。
 
@@ -48,7 +48,7 @@ URLを知っている人はプレイヤー名、個人別のダメージ、シ�
 
 ```bash
 # 開発環境。PHPは指定コンテナ・ユーザーで実行する。
-docker exec -u www-data -w /var/www/html/vel.works/ff14tools/logs2timeline php8.4 php artisan timeline-shares:prune
+docker exec -u www-data -w /var/www/html/vel.works/ff14tools/partyscope php8.4 php artisan timeline-shares:prune
 ```
 
 ## 検証
@@ -59,7 +59,7 @@ docker exec -u www-data -w /var/www/html/vel.works/ff14tools/logs2timeline php8.
 通常のAPIキー、キャッシュ、共有ファイルを使わない。
 
 ```bash
-python3 tests/Browser/share_smoke.py http://172.24.0.2:8101/ff14tools/logs2timeline
+python3 tests/Browser/share_smoke.py http://172.24.0.2:8101/ff14tools/partyscope
 ```
 
 実FFLogsでの再解析、大量イベントの保存時の性能は別途確認する。
