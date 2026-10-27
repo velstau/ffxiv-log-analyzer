@@ -22,7 +22,8 @@
             </div>
         @endif
 
-        <form action="{{ route('compare') }}" method="POST" class="card card-body app-form mb-3">
+        <form action="{{ route('compare') }}" method="POST" class="card card-body app-form mb-3"
+            data-busy-label="比較中…" data-busy-message="FFLogs から 2 つのログを取得して比較しています。長い戦闘では数十秒〜1分ほどかかることがあります。このままお待ちください。">
             @csrf
             <div>
                 <label for="url_a" class="legacy-block fw-medium text-blue" style="font-size:1.05rem;">パーティ A の URL</label>
@@ -54,6 +55,7 @@
                 class="btn btn-primary legacy-w-full legacy-py-2 legacy-px-4 bg-primary  rounded fw-semibold text-white  " style="font-size:1.05rem;">
                 比較する
             </button>
+            <div class="busy-status" role="status" aria-live="polite" hidden></div>
         </form>
 
         <div class="legacy-mt-6 text-center">

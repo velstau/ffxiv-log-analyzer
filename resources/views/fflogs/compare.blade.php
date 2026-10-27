@@ -1016,6 +1016,8 @@
 @if (($shareDraft ?? false) || ($isShared ?? false))
     @include('fflogs._timeline_share', [
         'shareTitle' => 'DPS比較の結果をURLで共有',
+        // 共有を作るときに範囲の再集計用の集計を FFLogs から取り置くので、数秒〜1分かかる
+        'shareWait' => '共有URLを作成しています。グラフの範囲を共有先でも再集計できるよう、FFLogs から集計を取得しているため、数秒〜1分ほどかかります。',
         'shareNotice' => ($hideNames ?? false)
             ? 'プレイヤー名は「SCH(A)」のような表記で保存され、実名は共有されません。FFLogsのレポート番号も共有されません。'
             : 'URLを知っている人は、プレイヤー名を含む比較結果を閲覧できます。FFLogsのレポート番号とAPIキーは共有されません。',

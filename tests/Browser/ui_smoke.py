@@ -104,6 +104,16 @@ with sync_playwright() as pw:
     page.select_option('#zoneSelect', '77')
     assert page.locator('#encounterSelect option').count() == 1
 
+    # Long-running form posts show a busy state (navigation is blocked after logs-ui.js has handled submit).
+    visit('/compare')
+    page.fill('#url_a', 'https://ja.fflogs.com/reports/x?fight=1')
+    page.fill('#url_b', 'https://ja.fflogs.com/reports/y?fight=1')
+    page.evaluate("document.querySelector('form[data-busy-label]').addEventListener('submit', e => e.preventDefault())")
+    page.locator('form button[type=submit]').click()
+    expect(page.locator('form button[type=submit]')).to_be_disabled()
+    expect(page.locator('form button[type=submit]')).to_contain_text('比較中')
+    expect(page.locator('form .busy-status')).to_contain_text('経過 1 秒', timeout=3000)
+
     # Simulate the range API response only. The original URL and selection code run unchanged.
     requests = []
     def range_response(route):

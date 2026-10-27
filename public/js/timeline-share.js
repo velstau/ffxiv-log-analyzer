@@ -8,8 +8,9 @@
     var error = document.getElementById('timeline-share-error');
     var create = document.getElementById('timeline-share-create');
     if (create) create.addEventListener('click', async function () {
-        create.disabled = true;
-        create.textContent = '共有URLを作成中…';
+        var stop = window.LogsBusy
+            ? window.LogsBusy.start(create, '共有URLを作成中…', document.getElementById('timeline-share-progress'), modal.dataset.shareWait || '')
+            : (function () { create.disabled = true; create.textContent = '共有URLを作成中…'; return function () { create.disabled = false; create.textContent = '共有URLを作成する'; }; })();
         error.hidden = true;
         try {
             var response = await fetch(modal.dataset.shareEndpoint, {
@@ -29,8 +30,7 @@
             error.textContent = e.message || '通信できませんでした。時間をおいて再度お試しください。';
             error.hidden = false;
         } finally {
-            create.disabled = false;
-            create.textContent = '共有URLを作成する';
+            stop();
         }
     });
     document.getElementById('timeline-share-copy').addEventListener('click', async function () {

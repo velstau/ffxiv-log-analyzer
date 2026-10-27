@@ -124,4 +124,54 @@
     window.addEventListener('resize', layout);
     window.addEventListener('load', layout);
     layout();
+
+})();
+
+// 時間のかかる処理の「処理中」表示（上の処理は表のない画面では途中で抜けるので、別にしておく）
+(function () {
+    'use strict';
+    // ボタンをスピナー付きにして押せなくし、説明と経過秒数を出す。
+    // 共有URLの作成（timeline-share.js）からも window.LogsBusy.start で使う。
+    var spinner = '<span class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span>';
+    window.LogsBusy = {
+        start: function (button, label, box, message) {
+            var original = button.innerHTML;
+            button.disabled = true;
+            button.setAttribute('aria-busy', 'true');
+            button.innerHTML = spinner + label;
+            var started = Date.now(), timer = null;
+            if (box) {
+                box.innerHTML = '<span class="busy-text"></span><span class="busy-elapsed" aria-hidden="true"></span>';
+                box.querySelector('.busy-text').textContent = message;
+                box.hidden = false;
+                var elapsed = box.querySelector('.busy-elapsed');
+                timer = setInterval(function () {
+                    elapsed.textContent = '（経過 ' + Math.floor((Date.now() - started) / 1000) + ' 秒）';
+                }, 1000);
+            }
+            return function stop() {
+                if (timer) clearInterval(timer);
+                if (box) { box.hidden = true; box.innerHTML = ''; }
+                button.disabled = false;
+                button.removeAttribute('aria-busy');
+                button.innerHTML = original;
+            };
+        }
+    };
+    // data-busy-label を持つフォーム（軽減の Analyze・DPS比較）は、送信から次の画面が出るまで処理中を表示する
+    var stops = [];
+    document.querySelectorAll('form[data-busy-label]').forEach(function (form) {
+        form.addEventListener('submit', function (event) {
+            if (form.dataset.sending === '1') { event.preventDefault(); return; } // 二重送信しない
+            form.dataset.sending = '1';
+            var button = form.querySelector('button[type="submit"]');
+            if (!button) return;
+            stops.push({ form: form, stop: window.LogsBusy.start(button, form.dataset.busyLabel, form.querySelector('.busy-status'), form.dataset.busyMessage || '') });
+        });
+    });
+    // 戻るボタンでキャッシュから表示されたときは、処理中のままにしない
+    window.addEventListener('pageshow', function (event) {
+        if (!event.persisted) return;
+        stops.splice(0).forEach(function (s) { s.stop(); delete s.form.dataset.sending; });
+    });
 })();

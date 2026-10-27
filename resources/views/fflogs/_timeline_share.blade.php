@@ -1,5 +1,6 @@
 <div class="modal fade" id="timeline-share" tabindex="-1" aria-labelledby="timeline-share-title" aria-hidden="true"
-    data-share-endpoint="{{ route('timeline-shares.store') }}" data-share-draft="{{ $shareDraft ?? '' }}">
+    data-share-endpoint="{{ route('timeline-shares.store') }}" data-share-draft="{{ $shareDraft ?? '' }}"
+    data-share-wait="{{ $shareWait ?? '共有URLを作成しています。' }}">
     <div class="modal-dialog modal-dialog-centered"><div class="modal-content">
         <div class="modal-header"><h2 class="modal-title" id="timeline-share-title">{{ $shareTitle ?? '軽減・バリア結果をURLで共有' }}</h2><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="閉じる"></button></div>
         <div class="modal-body">
@@ -17,6 +18,7 @@
             </div>
             @if (!($isShared ?? false))
                 <button type="button" class="btn btn-primary" id="timeline-share-create">共有URLを作成する</button>
+                <div class="busy-status" id="timeline-share-progress" role="status" aria-live="polite" hidden></div>
             @endif
         </div>
         @if ($canDeleteShare ?? false)

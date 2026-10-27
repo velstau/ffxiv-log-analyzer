@@ -21,7 +21,8 @@
             </div>
         @endif
 
-        <form action="{{ route('analyze') }}" method="POST" class="card card-body app-form mb-3">
+        <form action="{{ route('analyze') }}" method="POST" class="card card-body app-form mb-3"
+            data-busy-label="解析中…" data-busy-message="FFLogs からログを取得して解析しています。長い戦闘では数十秒かかることがあります。このままお待ちください。">
             @csrf
             <div>
                 <label for="url" class="legacy-block text-base fw-medium text-body">FFLogs Report URL</label>
@@ -49,6 +50,7 @@
                 class="btn btn-primary legacy-w-full legacy-py-2 legacy-px-4 bg-primary  rounded fw-semibold text-white  ">
                 Analyze
             </button>
+            <div class="busy-status" role="status" aria-live="polite" hidden></div>
         </form>
 
         <div class="legacy-mt-6 legacy-pt-4 legacy-border-t border-secondary text-center">

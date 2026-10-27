@@ -78,3 +78,9 @@
 @media(max-width:600px){.timeline-app #mitigation-table td.detail-trigger.c-hit{position:relative!important;left:auto!important}}
 
 @media(max-width:1100px){.analysis-actions{flex-basis:100%}.analysis-action-group+.analysis-action-group{border-left:0;padding-left:0}}
+
+/* 時間のかかる処理の「処理中」表示（logs-ui.js の LogsBusy） */
+.busy-status{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px;margin-top:8px;padding:8px 12px;border-left:3px solid var(--tblr-primary);border-radius:4px;background:var(--tblr-bg-surface-secondary);color:var(--tblr-body-color);font-size:1rem;line-height:1.5}
+.busy-status[hidden]{display:none}
+.btn[aria-busy="true"]:disabled{opacity:.9}
+.busy-status .busy-elapsed{color:var(--tblr-secondary);font-variant-numeric:tabular-nums}
