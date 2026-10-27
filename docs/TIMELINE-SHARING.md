@@ -130,5 +130,6 @@ DPS比較（`/compare`）も軽減・バリアと同じ仕組みに載せた。�
 - 参加者の表（実名 => ジョブ略称）は `TimelineBuilder::build` が `roster` として返す（被弾しなかった人も含めるため masterData から引く）。
   `roster` は置き換えに使った後で捨て、下書き・共有には入れない。
 - 置き換えは比較と共通の `App\Support\PlayerAliases`。実名は軽減の使用者・シナジー・死因・文章の中などあちこちに入るので、
-  項目を列挙せず、配列全体の値とキーを部分一致で置き換える。
+  項目を列挙せず、配列全体の値とキーのうち実名と完全に一致するものを置き換える（部分一致だと、実名と同じ技名や
+  軽減グループ名「Tank Role」まで書き換わる）。軽減列の定義（`mitigationColumns` など）は対象から外す。
 - 関係するテスト: `tests/Feature/MitigationHideNamesTest.php`、`tests/Browser/ui_smoke.py`（`/__ui/timeline?hide=1`）。

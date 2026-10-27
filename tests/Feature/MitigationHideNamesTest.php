@@ -22,11 +22,11 @@ class MitigationHideNamesTest extends TestCase
         Http::preventStrayRequests();
     }
 
-    /** フィクスチャの「Player N」を実名らしい名前にし、文章に埋め込まれた名前と表に出ない参加者も足す */
+    /** フィクスチャの「Player N」を実名らしい名前にし、被弾の表に出ない参加者（軽減の対象だけに出る人）も足す */
     private function analysis(): array
     {
         $data = json_decode(preg_replace('/Player (\d)/', 'Real Person $1', json_encode(UiData::timeline())), true);
-        $data['playerTimelines']['Real Person 1'][0]['enemy_action'] = 'Bench Warmer と Real Person 2 への Test attack';
+        $data['playerTimelines']['Real Person 1'][0]['target'] = 'Bench Warmer';
         $data['roster'] = ['Bench Warmer' => 'AST'] + array_combine(
             array_map(fn($i) => "Real Person {$i}", range(1, 8)),
             ['PLD', 'DRK', 'WHM', 'SCH', 'SAM', 'NIN', 'BRD', 'PCT'],
@@ -70,14 +70,15 @@ class MitigationHideNamesTest extends TestCase
     }
 
     #[Test]
-    public function aliases_number_the_same_job_by_name_and_replace_embedded_names(): void
+    public function aliases_number_the_same_job_by_name_and_leave_skill_names_alone(): void
     {
         $alias = PlayerAliases::make(['Zed Healer' => 'SCH', 'Amy Healer' => 'SCH', 'Tank One' => 'PLD', 'No Job' => null]);
         $this->assertEquals(['Amy Healer' => 'SCH1', 'Zed Healer' => 'SCH2', 'Tank One' => 'PLD', 'No Job' => 'PT'], $alias);
         $this->assertSame('SCH(B2)', PlayerAliases::make(['Zed Healer' => 'SCH', 'Amy Healer' => 'SCH'], 'B')['Zed Healer']);
 
-        $out = PlayerAliases::apply(['Tank One' => ['src' => 'Zed Healer', 'text' => 'Amy Healer と Zed Healer'], 'n' => 3], $alias);
-        $this->assertSame(['PLD' => ['src' => 'SCH2', 'text' => 'SCH1 と SCH2'], 'n' => 3], $out);
+        // 実名と同じ語を含む技名などは書き換えない（完全一致だけ）
+        $out = PlayerAliases::apply(['Tank One' => ['src' => 'Zed Healer', 'ability' => 'Tank One Buster'], 'n' => 3], $alias);
+        $this->assertSame(['PLD' => ['src' => 'SCH2', 'ability' => 'Tank One Buster'], 'n' => 3], $out);
     }
 
     #[Test]

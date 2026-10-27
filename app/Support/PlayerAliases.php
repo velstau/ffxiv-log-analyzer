@@ -6,9 +6,10 @@ namespace App\Support;
  * プレイヤーの実名を「SCH」「SCH(A)」のような別名に置き換える（名前を伏せて表示・共有するため）。
  *
  * 実名は一覧のほか、軽減の使用者・シナジーの付与先・死因などあちこちに入るので、項目を列挙せず
- * 配列全体を置き換える。値は文章に埋め込まれた名前も残さないよう部分一致で、キーは実名と完全に一致するもの
- * （実名をキーにした表）だけを置き換える。キーを部分一致にすると、実名が「Tank Role」のような
- * 軽減グループ名と同じときに列のキー（「Tank Role_0」）まで書き換わり、表が壊れる。
+ * 配列全体の値とキーのうち、実名と完全に一致するものを置き換える。
+ * 部分一致にしないのは、実名が技名や軽減グループ名（「Tank Role」）と同じときに、技名や列のキー
+ * （「Tank Role_0」）まで書き換わって表が壊れるため。解析結果の文字列に実名を埋め込んだ文章はない
+ * （2026-10-27 に TimelineBuilder・DeathCheckerBuilder で確認）。埋め込む文章を足すときは、伏せたあとに組み立てる。
  */
 class PlayerAliases
 {
@@ -51,10 +52,9 @@ class PlayerAliases
         if (!$alias) {
             return $data;
         }
-        $swap = fn(string $s) => strtr($s, $alias); // 長い名前から先に置き換わり、置き換え後の文字列は再度置き換えない
-        $walk = function ($v) use (&$walk, $swap, $markNamed, $alias) {
+        $walk = function ($v) use (&$walk, $markNamed, $alias) {
             if (is_string($v)) {
-                return $swap($v);
+                return $alias[$v] ?? $v;
             }
             if (!is_array($v)) {
                 return $v;
