@@ -46,7 +46,8 @@ class FFLogsController extends Controller
         // 名前を伏せるときは、一時保存・共有の前に置き換える（実名を保存しない）
         $data['hideNames'] = $request->boolean('hide_names');
         if ($data['hideNames']) {
-            $data = PlayerAliases::apply($data, PlayerAliases::make($data['roster'] ?? []));
+            // 軽減列の定義はジョブ・ロールで組んだ構造なので触らない（実名がグループ名と同じでも列が壊れないように）
+            $data = PlayerAliases::apply($data, PlayerAliases::make($data['roster'] ?? []), false, ['fight', 'mitigationColumns', 'mitigationGroups', 'mitigationGroupIcons']);
         }
         unset($data['roster']);
 

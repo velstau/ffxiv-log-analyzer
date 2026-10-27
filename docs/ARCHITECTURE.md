@@ -41,7 +41,7 @@ TimelineBuilder::build()              ← 組み立てのパイプライン
    └─ DeathCheckerBuilder             ← 死亡スナップショットの組み立て
    │
    ▼
-view('fflogs.timeline', [...12個のキー])
+view('fflogs.timeline', [...12個のキー＋hideNames])
 ```
 
 依存の向きは常に **Controller → Service → Support** の一方向。

@@ -6,7 +6,9 @@ namespace App\Support;
  * プレイヤーの実名を「SCH」「SCH(A)」のような別名に置き換える（名前を伏せて表示・共有するため）。
  *
  * 実名は一覧のほか、軽減の使用者・シナジーの付与先・死因などあちこちに入るので、項目を列挙せず
- * 配列全体（値とキー）を置き換える。文章に埋め込まれた名前も残さないよう、部分一致で置き換える。
+ * 配列全体を置き換える。値は文章に埋め込まれた名前も残さないよう部分一致で、キーは実名と完全に一致するもの
+ * （実名をキーにした表）だけを置き換える。キーを部分一致にすると、実名が「Tank Role」のような
+ * 軽減グループ名と同じときに列のキー（「Tank Role_0」）まで書き換わり、表が壊れる。
  */
 class PlayerAliases
 {
@@ -41,15 +43,16 @@ class PlayerAliases
      *
      * $markNamed のときは、'name' が置き換わった配列に anon => true を付ける
      * （DPS比較のアドバイス文で「SCH（SCH(A)）」と重ねないための印）。
+     * $keep に挙げた最上位のキー（ジョブ・ロールで組んだ軽減列の定義など、実名を含まない構造）はそのまま残す。
      */
-    public static function apply(mixed $data, array $alias, bool $markNamed = false): mixed
+    public static function apply(mixed $data, array $alias, bool $markNamed = false, array $keep = []): mixed
     {
         $alias = array_filter($alias, fn($to, $from) => $from !== '' && $from !== $to, ARRAY_FILTER_USE_BOTH);
         if (!$alias) {
             return $data;
         }
         $swap = fn(string $s) => strtr($s, $alias); // 長い名前から先に置き換わり、置き換え後の文字列は再度置き換えない
-        $walk = function ($v) use (&$walk, $swap, $markNamed) {
+        $walk = function ($v) use (&$walk, $swap, $markNamed, $alias) {
             if (is_string($v)) {
                 return $swap($v);
             }
@@ -59,13 +62,24 @@ class PlayerAliases
             $out = [];
             foreach ($v as $k => $item) {
                 $new = $walk($item);
-                $out[is_string($k) ? $swap($k) : $k] = $new;
+                $out[is_string($k) ? ($alias[$k] ?? $k) : $k] = $new;
                 if ($markNamed && $k === 'name' && is_string($item) && $new !== $item) {
                     $out['anon'] = true;
                 }
             }
             return $out;
         };
-        return $walk($data);
+        if (!is_array($data) || !$keep) {
+            return $walk($data);
+        }
+        $out = [];
+        foreach ($data as $k => $v) {
+            if (in_array($k, $keep, true)) {
+                $out[$k] = $v;
+            } else {
+                $out[is_string($k) ? ($alias[$k] ?? $k) : $k] = $walk($v);
+            }
+        }
+        return $out;
     }
 }

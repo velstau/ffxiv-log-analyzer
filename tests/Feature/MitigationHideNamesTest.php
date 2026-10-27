@@ -79,4 +79,12 @@ class MitigationHideNamesTest extends TestCase
         $out = PlayerAliases::apply(['Tank One' => ['src' => 'Zed Healer', 'text' => 'Amy Healer と Zed Healer'], 'n' => 3], $alias);
         $this->assertSame(['PLD' => ['src' => 'SCH2', 'text' => 'SCH1 と SCH2'], 'n' => 3], $out);
     }
+
+    #[Test]
+    public function a_name_equal_to_a_mitigation_group_does_not_break_the_columns(): void
+    {
+        $data = ['Tank Role' => ['src' => 'Tank Role'], 'cols' => ['Tank Role_0' => ['used_src' => 'Tank Role']], 'mitigationGroups' => ['Tank Role' => ['Tank Role_0' => []]]];
+        $out = PlayerAliases::apply($data, ['Tank Role' => 'PLD'], false, ['mitigationGroups']);
+        $this->assertSame(['PLD' => ['src' => 'PLD'], 'cols' => ['Tank Role_0' => ['used_src' => 'PLD']], 'mitigationGroups' => ['Tank Role' => ['Tank Role_0' => []]]], $out);
+    }
 }
