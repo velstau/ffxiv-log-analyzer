@@ -16,6 +16,9 @@ use Illuminate\Support\Facades\Log;
  */
 class IconController extends Controller
 {
+    /** ブラウザを装わず、ツール名と連絡先URLを名乗る（2026-10-27 に rpglogs から取得できることを確認）。 */
+    private const USER_AGENT = 'Mozilla/5.0 (compatible; partyscope/1.0; +https://vel.works/ff14tools/partyscope/)';
+
     public function proxyImage(Request $request)
     {
         $url = $request->input('url');
@@ -33,7 +36,7 @@ class IconController extends Controller
         // Fetch
         $context = stream_context_create([
             'http' => [
-                'header' => "User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64)\r\n",
+                'header' => 'User-Agent: ' . self::USER_AGENT . "\r\n",
             ],
         ]);
         $content = @file_get_contents($url, false, $context);
@@ -90,7 +93,7 @@ class IconController extends Controller
         if (!is_file($path)) {
             $context = stream_context_create([
                 'http' => [
-                    'header' => "User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64)\r\n",
+                    'header' => 'User-Agent: ' . self::USER_AGENT . "\r\n",
                     'timeout' => 10,
                 ],
             ]);
