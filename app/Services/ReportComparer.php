@@ -1016,6 +1016,7 @@ class ReportComparer
                 'tt' => (int) $t['totalTime'],
                 'down' => (int) $t['damageDowntime'],
                 'e' => array_map(fn($e) => [
+                    'id' => $e['id'] ?? null,
                     'name' => $e['name'] ?? '?',
                     'type' => $e['type'] ?? '',
                     'total' => (int) round($e['total'] ?? 0),
@@ -1035,8 +1036,25 @@ class ReportComparer
             'phases' => $phases,
         ];
         if ($hideNames) {
-            // 別名の付け方は比較のとき（FFLogsController::compare の anonymize）と同じ
-            $index = $this->anonymize($index, $this->roster($code, $fightId), $label);
+            // 別名の付け方は比較のとき（FFLogsController::compare の anonymize）と同じ。
+            // 参加者表を取れなかったときも実名を残さないよう、取り置きに出てくる名前（ジョブは type から）と
+            // 損失の材料のキー（ジョブ不明）を必ず表に入れる
+            $roster = $this->roster($code, $fightId);
+            foreach ($phases as $p) {
+                foreach ($p['buckets'] as $b) {
+                    foreach ($b['e'] as $e) {
+                        $roster += [$e['name'] => TimelineJobMeta::of((string) $e['type'])['abbr'] ?: null];
+                    }
+                }
+            }
+            foreach ($index['ctx'] as $byName) {
+                foreach (is_array($byName) ? array_keys($byName) : [] as $name) {
+                    if (is_string($name)) {
+                        $roster += [$name => null];
+                    }
+                }
+            }
+            $index = $this->anonymize($index, $roster, $label);
             $index['anon'] = true;
         }
 
@@ -1087,16 +1105,18 @@ class ReportComparer
             $tt += $b['tt'];
             $down += $b['down'];
             foreach ($b['e'] as $e) {
-                $acc = $byName[$e['name']] ?? ['name' => $e['name'], 'type' => $e['type'], 'total' => 0, 'totalRDPS' => 0, 'totalADPS' => 0, 'activeTime' => 0];
+                // 同じ PT に同名（別ワールド）がいても混ぜないよう、アクター ID で分ける
+                $key = isset($e['id']) ? 'id:' . $e['id'] : 'name:' . $e['name'];
+                $acc = $byName[$key] ?? ['name' => $e['name'], 'type' => $e['type'], 'total' => 0, 'totalRDPS' => 0, 'totalADPS' => 0, 'activeTime' => 0];
                 $acc['total'] += $e['total'];
                 $acc['totalRDPS'] += $e['rdps'];
                 $acc['totalADPS'] += $e['adps'];
                 $acc['activeTime'] += $e['active'];
-                $byName[$e['name']] = $acc;
+                $byName[$key] = $acc;
             }
         }
-        foreach ($byName as $name => &$e) {
-            $e['activeTime'] = min($tt, $e['activeTime'] + ($i1 - $i0 - 1) * ($ph['activeFix'][$name] ?? 0));
+        foreach ($byName as &$e) {
+            $e['activeTime'] = min($tt, $e['activeTime'] + ($i1 - $i0 - 1) * ($ph['activeFix'][$e['name']] ?? 0));
         }
         unset($e);
 

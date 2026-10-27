@@ -731,6 +731,7 @@
                     const y = e.clientY - r.top;
                     if (y > chart.chartArea.bottom + 4) return; // 軸ラベル・凡例の上でのドラッグは無視
                     dragging = true;
+                    reqSeq++; // 前の範囲の応答が、ドラッグ中・ドラッグ後のカードに入らないように
                     anchorT = tAt(e.clientX);
                     chart.$sel = { t0: anchorT, t1: anchorT };
                     try { cv.setPointerCapture(e.pointerId); } catch (err) { /* 非対応環境は無視 */ }
@@ -759,6 +760,7 @@
 
                 function clearSel() {
                     chart.$sel = null;
+                    reqSeq++; // 通信中の範囲の応答を捨てる
                     panel.innerHTML = '';
                     restoreCard();
                     chart.render();

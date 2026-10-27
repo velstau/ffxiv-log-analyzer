@@ -67,19 +67,22 @@ class CompareShareTest extends TestCase
      * 共有の範囲再集計の材料。各 10 秒区間に、総ダメージが区間ごとに増える 1 人だけを置く。
      * totalTime 10 秒・combatTime 9 秒（窓ごとに 1 秒引かれる）・activeTime 8 秒。
      */
-    private function fakeBuckets(): void
+    private function fakeBuckets(bool $withRoster = true): void
     {
         foreach (['FixtureA', 'FixtureB'] as $code) {
             Cache::put("fflogs:fight:{$code}:1", ['startTime' => 0, 'endTime' => 200000, 'name' => 'Test boss', 'gameZone' => ['name' => 'Test zone'], 'encounterID' => 0], 600);
             Cache::put("fflogs:losscontext:{$code}:1", ['potionByPlayer' => [], 'potionIconByPlayer' => [], 'deathsByPlayer' => [], 'dmgDebuffSegs' => [], 'ddIconByPlayer' => [], 'deadSegs' => []], 600);
-            Cache::put("fflogs:roster:{$code}:1", [self::REAL_NAME => 'PLD'], 600);
+            if ($withRoster) {
+                Cache::put("fflogs:roster:{$code}:1", [self::REAL_NAME => 'PLD'], 600);
+            }
         }
         $data = UiData::compare();
         $this->mock(FFLogsService::class, function ($mock) {
             $mock->shouldReceive('parseUrl')->andReturn(['code' => 'FixtureA', 'fightId' => 1], ['code' => 'FixtureB', 'fightId' => 1]);
+            $mock->shouldReceive('getMasterData')->andReturn(null); // 参加者表を取れない
             $mock->shouldReceive('getDamageTables')->andReturnUsing(fn($code, $fightId, array $windows) => array_map(fn($i) => [
                 'totalTime' => 10000, 'combatTime' => 9000, 'damageDowntime' => 0,
-                'entries' => [['name' => self::REAL_NAME, 'type' => 'Paladin', 'total' => 100000 * ($i + 1), 'totalRDPS' => 100000 * ($i + 1), 'totalADPS' => 100000 * ($i + 1), 'activeTime' => 8000]],
+                'entries' => [['id' => 7, 'name' => self::REAL_NAME, 'type' => 'Paladin', 'total' => 100000 * ($i + 1), 'totalRDPS' => 100000 * ($i + 1), 'totalADPS' => 100000 * ($i + 1), 'activeTime' => 8000]],
             ], array_keys($windows)));
         });
         // 取り置きは本物の ReportComparer で作る（partialMock はコンストラクタを通らず FFLogsService が入らない）
@@ -211,5 +214,18 @@ class CompareShareTest extends TestCase
             ->assertOk()->assertJsonPath('a.players.0.name', 'PLD(A)')->assertDontSee(self::REAL_NAME);
         $this->credentials()->withCredentials()->getJson('/compare/range?' . http_build_query($query))
             ->assertOk()->assertJsonPath('a.players.0.name', self::REAL_NAME);
+    }
+
+    #[Test]
+    public function hidden_shared_ranges_never_keep_real_names_even_without_the_roster(): void
+    {
+        $this->fakeBuckets(withRoster: false);
+        // 比較のときの別名は buildCompareSide の参加者表で付く（偽物では roster を直接渡している）
+        $resultUrl = $this->credentials()->post('/compare', ['url_a' => 'a', 'url_b' => 'b', 'hide_names' => '1'])->assertStatus(303)->headers->get('Location');
+        $this->credentials()->postJson(route('timeline-shares.store'), ['draft' => basename($resultUrl)])->assertOk();
+        $plaintext = Crypt::decryptString(Storage::disk('local')->get(Storage::disk('local')->files('timeline-shares')[0]));
+        $this->assertStringContainsString('rangeIndex', $plaintext);
+        $this->assertStringContainsString('PLD(A)', $plaintext);
+        $this->assertStringNotContainsString(self::REAL_NAME, $plaintext);
     }
 }
