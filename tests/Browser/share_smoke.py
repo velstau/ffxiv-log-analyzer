@@ -1,4 +1,5 @@
 """End-to-end sharing using isolated fixture router.php, with no FFLogs credentials."""
+import os
 import sys
 from pathlib import Path
 from playwright.sync_api import sync_playwright, expect
@@ -38,8 +39,9 @@ with sync_playwright() as pw:
     expect(reader.locator('#timeline-share-url')).to_have_value(url)
     reader.get_by_role('button', name='コピー', exact=True).click()
     expect(reader.locator('#timeline-share-status')).to_contain_text('コピー')
-    Path('/tmp/partyscope-applied').mkdir(exist_ok=True)
-    reader.screenshot(path='/tmp/partyscope-applied/share-guest-390.png')
+    out = Path(os.environ.get('UI_SCREENSHOTS', '/tmp/partyscope-applied'))
+    out.mkdir(parents=True, exist_ok=True)
+    reader.screenshot(path=str(out / 'share-guest-390.png'))
     assert not errors, errors
     page.goto(url, wait_until='networkidle')
     page.get_by_role('button', name='共有URL・管理', exact=True).click()
