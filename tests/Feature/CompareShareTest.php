@@ -57,8 +57,88 @@ class CompareShareTest extends TestCase
 
         // 閲覧者は API キーもセッションもないので、範囲の個人別再集計は出さない
         $this->flushSession();
-        $this->get($share['url'])->assertOk()->assertSee('共有結果（APIキー不要）')->assertSee('const CAN_REFETCH = false', false);
+        // この比較は 10 秒区間の取り置きを取れていない（FFLogs の偽物が答えない）ので、範囲は概算だけ
+        $this->get($share['url'])->assertOk()->assertSee('共有結果（APIキー不要）')->assertSee('const RANGE_MODE = "none"', false);
+        $this->getJson($share['url'] . '/range?phase=1&t0=0&t1=20')->assertStatus(409);
         Http::assertNothingSent();
+    }
+
+    /**
+     * 共有の範囲再集計の材料。各 10 秒区間に、総ダメージが区間ごとに増える 1 人だけを置く。
+     * totalTime 10 秒・combatTime 9 秒（窓ごとに 1 秒引かれる）・activeTime 8 秒。
+     */
+    private function fakeBuckets(): void
+    {
+        foreach (['FixtureA', 'FixtureB'] as $code) {
+            Cache::put("fflogs:fight:{$code}:1", ['startTime' => 0, 'endTime' => 200000, 'name' => 'Test boss', 'gameZone' => ['name' => 'Test zone'], 'encounterID' => 0], 600);
+            Cache::put("fflogs:losscontext:{$code}:1", ['potionByPlayer' => [], 'potionIconByPlayer' => [], 'deathsByPlayer' => [], 'dmgDebuffSegs' => [], 'ddIconByPlayer' => [], 'deadSegs' => []], 600);
+            Cache::put("fflogs:roster:{$code}:1", [self::REAL_NAME => 'PLD'], 600);
+        }
+        $data = UiData::compare();
+        $this->mock(FFLogsService::class, function ($mock) {
+            $mock->shouldReceive('parseUrl')->andReturn(['code' => 'FixtureA', 'fightId' => 1], ['code' => 'FixtureB', 'fightId' => 1]);
+            $mock->shouldReceive('getDamageTables')->andReturnUsing(fn($code, $fightId, array $windows) => array_map(fn($i) => [
+                'totalTime' => 10000, 'combatTime' => 9000, 'damageDowntime' => 0,
+                'entries' => [['name' => self::REAL_NAME, 'type' => 'Paladin', 'total' => 100000 * ($i + 1), 'totalRDPS' => 100000 * ($i + 1), 'totalADPS' => 100000 * ($i + 1), 'activeTime' => 8000]],
+            ], array_keys($windows)));
+        });
+        // 取り置きは本物の ReportComparer で作る（partialMock はコンストラクタを通らず FFLogsService が入らない）
+        $comparer = \Mockery::mock(ReportComparer::class, [app(FFLogsService::class)])->makePartial();
+        $comparer->shouldReceive('buildCompareSide')->andReturn(
+            $data['A'] + ['roster' => [self::REAL_NAME => 'PLD']],
+            $data['B'] + ['roster' => [self::REAL_NAME => 'PLD']],
+        );
+        $this->instance(ReportComparer::class, $comparer);
+    }
+
+    #[Test]
+    public function shared_ranges_are_recomputed_from_kept_buckets_without_a_viewer_key(): void
+    {
+        $this->fakeBuckets();
+        $resultUrl = $this->credentials()->post('/compare', ['url_a' => 'a', 'url_b' => 'b'])->assertStatus(303)->headers->get('Location');
+        $share = $this->credentials()->postJson(route('timeline-shares.store'), ['draft' => basename($resultUrl)])->assertOk()->json();
+        $plaintext = Crypt::decryptString(Storage::disk('local')->get(Storage::disk('local')->files('timeline-shares')[0]));
+        $this->assertStringContainsString('rangeIndex', $plaintext);
+        foreach (['FixtureA', 'FixtureB', 'test-secret'] as $secret) {
+            $this->assertStringNotContainsString($secret, $plaintext);
+        }
+
+        // 閲覧者はキーもセッションもない
+        $this->flushSession();
+        $this->get($share['url'])->assertOk()->assertSee('const RANGE_MODE = "shared"', false);
+        // 0〜20 秒＝最初の 2 区間：(10万+20万) ÷ (20 秒 − 1 秒)
+        $first = $this->getJson($share['url'] . '/range?phase=1&t0=0&t1=20')->assertOk()->json();
+        $this->assertEqualsWithDelta(300000 / 19, $first['a']['partyRdps'], 0.01);
+        $this->assertSame([0, 20], array_map('intval', $first['a']['win']));
+        // 稼働時間は境目 1 つぶん足し戻す：フェーズ 90 秒の 99% − 区間の和 72 秒 を 8 境目で割った値
+        $fix = round((0.99 * 90000 - 72000) / 8);
+        $this->assertEqualsWithDelta((16000 + $fix) / 20000 * 100, $first['a']['players'][0]['activePct'], 0.01);
+        $this->assertStringContainsString(self::REAL_NAME, $first['html']);
+
+        // 範囲は 10 秒単位に広げて丸める（5〜25 秒 → 0〜30 秒）。範囲が違えば値も違う
+        $wide = $this->getJson($share['url'] . '/range?phase=1&t0=5&t1=25')->assertOk()->json();
+        $this->assertSame([0, 30], array_map('intval', $wide['a']['win']));
+        $this->assertEqualsWithDelta(600000 / 29, $wide['a']['partyRdps'], 0.01);
+
+        $this->getJson($share['url'] . '/range?phase=9&t0=0&t1=20')->assertStatus(422);
+        $this->getJson($share['url'] . '/range?phase=1&t0=20&t1=20')->assertStatus(422);
+        Http::assertNothingSent();
+    }
+
+    #[Test]
+    public function shared_ranges_keep_names_hidden(): void
+    {
+        $this->fakeBuckets();
+        $resultUrl = $this->credentials()->post('/compare', ['url_a' => 'a', 'url_b' => 'b', 'hide_names' => '1'])->assertStatus(303)->headers->get('Location');
+        $share = $this->credentials()->postJson(route('timeline-shares.store'), ['draft' => basename($resultUrl)])->assertOk()->json();
+        $plaintext = Crypt::decryptString(Storage::disk('local')->get(Storage::disk('local')->files('timeline-shares')[0]));
+        $this->assertStringContainsString('rangeIndex', $plaintext);
+        $this->assertStringNotContainsString(self::REAL_NAME, $plaintext);
+
+        $this->flushSession();
+        $range = $this->getJson($share['url'] . '/range?phase=1&t0=0&t1=20')->assertOk()->assertDontSee(self::REAL_NAME);
+        $this->assertSame('PLD(A)', $range->json('a.players.0.name'));
+        $this->assertSame('PLD(B)', $range->json('b.players.0.name'));
     }
 
     #[Test]

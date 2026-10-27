@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Exceptions\TimelineShareLimitReached;
+use App\Services\ReportComparer;
 use App\Services\TimelineShareStore;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
@@ -32,11 +33,12 @@ class TimelineShareController extends Controller
         return $response->withHeaders(['Cache-Control' => 'private, no-store', 'X-Robots-Tag' => 'noindex, nofollow, noarchive', 'Referrer-Policy' => 'no-referrer']);
     }
 
-    public function store(Request $request, TimelineShareStore $shares)
+    public function store(Request $request, TimelineShareStore $shares, ReportComparer $comparer)
     {
         $validated = $request->validate(['draft' => ['required', 'string', 'regex:/\A[A-Za-z0-9]{48}\z/']]);
         try {
-            $share = $shares->publish($validated['draft'], (string) $request->session()->get('timeline_share_owner', ''));
+            // DPS 比較は、閲覧者がキーなしで範囲を再集計できるよう、作成者のキーで 10 秒区間の集計を取り置く
+            $share = $shares->publish($validated['draft'], (string) $request->session()->get('timeline_share_owner', ''), fn(array $data) => $comparer->withRangeIndex($data));
         } catch (TimelineShareLimitReached $e) {
             return response()->json(['message' => $e->getMessage()], 429);
         } catch (\RuntimeException $e) {
@@ -55,6 +57,47 @@ class TimelineShareController extends Controller
             ? response()->view(self::viewOf($snapshot), $snapshot['data'] + ['isShared' => true, 'shareId' => $id, 'shareExpiresAt' => $snapshot['expires_at'], 'canDeleteShare' => $shares->ownedBy($snapshot, (string) $request->session()->get('timeline_share_owner', ''))])
             : response()->view('fflogs.share-unavailable', [], 404);
         return $response->withHeaders(['Cache-Control' => 'private, no-store', 'X-Robots-Tag' => 'noindex, nofollow, noarchive', 'Referrer-Policy' => 'no-referrer']);
+    }
+
+    /**
+     * 共有した DPS 比較の、グラフで選んだ範囲の再集計（AJAX）。閲覧者のキーは使わない。
+     * 共有を作るときに取り置いた 10 秒区間の集計（rangeIndex）を足し合わせ、FFLogsController::rangeStats と同じ形で返す。
+     * t0・t1 はフェーズ開始からの秒。範囲は 10 秒単位に広げて丸め、実際の範囲を a.win・b.win で返す。
+     */
+    public function range(Request $request, string $id, TimelineShareStore $shares, ReportComparer $comparer)
+    {
+        $snapshot = $shares->find($id);
+        if (!$snapshot || TimelineShareStore::kindOf($snapshot) !== 'compare') {
+            return response()->json(['error' => '共有が見つかりません。'], 404);
+        }
+        $pid = (string) $request->query('phase', '');
+        $t0 = (float) $request->query('t0', 0);
+        $t1 = (float) $request->query('t1', 0);
+        if (!preg_match('/\A[0-9]{1,3}\z/', $pid) || $t0 < 0 || $t1 - $t0 < 1) {
+            return response()->json(['error' => 'パラメータが不正です。'], 422);
+        }
+
+        $out = [];
+        $indexed = false;
+        foreach (['a' => 'A', 'b' => 'B'] as $k => $side) {
+            $index = $snapshot['data'][$side]['rangeIndex'] ?? null;
+            if (!is_array($index)) {
+                continue;
+            }
+            $indexed = true;
+            $sum = $comparer->summarizeStoredWindow($index, $pid, $t0, $t1);
+            if ($sum !== null) {
+                $out[$k] = $sum;
+            }
+        }
+        if (!$indexed) {
+            return response()->json(['error' => 'この共有には範囲の再集計用のデータがありません（作り直すと対応します）。'], 409);
+        }
+        if (!$out) {
+            return response()->json(['error' => '選択範囲がどちらのフェーズにも掛かっていません。'], 422);
+        }
+        return response()->json(FFLogsController::rangePayload($comparer, $out))
+            ->withHeaders(['Cache-Control' => 'private, no-store', 'X-Robots-Tag' => 'noindex, nofollow, noarchive']);
     }
 
     public function destroy(Request $request, string $id, TimelineShareStore $shares)

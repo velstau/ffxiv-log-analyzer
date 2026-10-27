@@ -43,7 +43,11 @@ class TimelineShareStore
         return $draft && hash_equals($draft['owner'], hash('sha256', $owner)) ? $draft : null;
     }
 
-    public function publish(string $draft, string $owner): ?array
+    /**
+     * @param  callable|null $prepare DPS 比較の共有を新しく作るときだけ、保存する直前（レポート番号を外す前）に
+     *                                データを渡して差し替えさせる（範囲再集計用の取り置きを足すため）
+     */
+    public function publish(string $draft, string $owner, ?callable $prepare = null): ?array
     {
         $data = $this->findDraft($draft, $owner);
         if (!$data) {
@@ -69,7 +73,11 @@ class TimelineShareStore
         }
         $id = Str::random(48);
         $kind = self::kindOf($data);
-        $snapshot = ['version' => 1, 'kind' => $kind, 'owner' => $data['owner'], 'created_at' => now()->toIso8601String(), 'expires_at' => now()->addDays(self::DAYS)->toIso8601String(), 'data' => $kind === 'compare' ? self::withoutReportCodes($data['data']) : $data['data']];
+        $payload = $data['data'];
+        if ($kind === 'compare') {
+            $payload = self::withoutReportCodes($prepare ? $prepare($payload) : $payload);
+        }
+        $snapshot = ['version' => 1, 'kind' => $kind, 'owner' => $data['owner'], 'created_at' => now()->toIso8601String(), 'expires_at' => now()->addDays(self::DAYS)->toIso8601String(), 'data' => $payload];
         $encrypted = Crypt::encryptString(json_encode($snapshot, JSON_THROW_ON_ERROR));
         if (!Storage::disk('local')->put('timeline-shares/' . $id . '.enc', $encrypted)) {
             throw new RuntimeException('Could not save shared timeline.');
@@ -147,7 +155,8 @@ class TimelineShareStore
 
     /**
      * 共有にはレポート番号を残さない（軽減の共有と同じ扱い。名前を伏せてもレポートを開けば分かってしまう）。
-     * 番号は範囲指定の再集計にだけ使うもので、共有画面ではその再集計を出さない。
+     * 番号は範囲指定の再集計にだけ使うもので、共有画面の範囲指定は、共有を作るときに取り置いた
+     * 10 秒区間の集計（rangeIndex。番号を含まない）から出す。
      */
     private static function withoutReportCodes(array $data): array
     {

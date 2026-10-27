@@ -933,7 +933,7 @@ class ReportComparer
      */
     public function summarizeWindow(string $code, int $fightId, float $start, float $end): ?array
     {
-        $fight = Cache::remember("fflogs:fight:{$code}:{$fightId}", 1800, fn() => $this->fflogs->getFightDetails($code, $fightId));
+        $fight = $this->cachedFight($code, $fightId);
         if (!$fight) {
             return null;
         }
@@ -946,24 +946,184 @@ class ReportComparer
             return null;
         }
 
-        $ctx = Cache::remember("fflogs:losscontext:{$code}:{$fightId}", 1800, function () use ($code, $fightId, $st, $et) {
-            $master = $this->fflogs->getMasterData($code);
-            $actors = collect($master['actors'] ?? [])->keyBy('id');
-            $abilities = collect($master['abilities'] ?? [])->keyBy('gameID');
-            return $this->buildLossContext($code, $fightId, $st, $et, $actors, $abilities);
-        });
-
         $table = $this->fflogs->getDamageTable($code, $fightId, $start, $end);
         if (empty($table)) {
             return null;
         }
-        $summary = $this->summarizeDamageTable($table, $start, $end);
+        return $this->finishWindow($table, $start, $end, $et, $this->lossContext($code, $fightId, $st, $et), self::damageDownArgs($fight));
+    }
 
-        $ddArgs = [$fight['name'] ?? '', $fight['gameZone']['name'] ?? '', (int) ($fight['encounterID'] ?? 0)];
+    /**
+     * 共有を作るときに、A/B それぞれへ範囲再集計用の取り置き（rangeIndex）を足す。
+     * 作成者のキーがない・FFLogs が答えないなどで取れなかった側は足さない（共有画面では概算だけになる）。
+     */
+    public function withRangeIndex(array $data): array
+    {
+        foreach (['A', 'B'] as $k) {
+            if (empty($data[$k]['code']) || empty($data[$k]['fightId']) || isset($data[$k]['rangeIndex'])) {
+                continue;
+            }
+            try {
+                $data[$k]['rangeIndex'] = $this->buildRangeIndex($data[$k], !empty($data['hideNames']), $k);
+            } catch (\Throwable $e) {
+                Log::warning('Compare range index failed: ' . $e::class);
+            }
+        }
+        return $data;
+    }
+
+    /**
+     * 共有の範囲再集計用に、各フェーズを 10 秒区間に切った DamageDone 集計を取り置く（共有を作る時点で、作成者のキーで取る）。
+     *
+     * 共有にはレポート番号を残さず、閲覧者のキーも使わないので、共有画面の範囲指定はこの取り置きを足し合わせて出す
+     * （summarizeStoredWindow）。2026-10-27 に絶の 10 フェーズで、1 回で取った窓の値と次のとおり照合した:
+     *  - 総ダメージ・rDPS・aDPS・damageDowntime・totalTime は区間の和と一致する
+     *  - combatTime は窓ごとに一定量（ログごとに決まる。0.8〜1 秒）引かれるので、区間の和からその 1 回ぶんだけ引く
+     *  - 各人の activeTime は区間の境目ごとに削られる（1 境目あたり約 2 秒）。フェーズ全体の値との差を境目の数で割って足し戻す（推定）
+     *
+     * 名前を伏せる共有では、フェーズカードと同じ別名に置き換えてから返す（実名を共有に残さない）。
+     */
+    public function buildRangeIndex(array $side, bool $hideNames, string $label): array
+    {
+        $code = (string) $side['code'];
+        $fightId = (int) $side['fightId'];
+        $fight = $this->cachedFight($code, $fightId);
+        if (!$fight) {
+            throw new \RuntimeException('Fight not found.');
+        }
+        $st = (float) $fight['startTime'];
+        $et = (float) $fight['endTime'];
+        $bucketMs = self::SERIES_BUCKET_SEC * 1000;
+
+        $windows = [];
+        $owners = [];
+        foreach ($side['phases'] as $ph) {
+            for ($s = (float) $ph['startMs']; $s < (float) $ph['endMs']; $s += $bucketMs) {
+                $windows[] = [$s, min((float) $ph['endMs'], $s + $bucketMs)];
+                $owners[] = $ph['id'];
+            }
+        }
+        $tables = $this->fflogs->getDamageTables($code, $fightId, $windows);
+
+        $phases = [];
+        $losses = [];
+        foreach ($side['phases'] as $ph) {
+            $phases[$ph['id']] = ['start' => (float) $ph['startMs'], 'end' => (float) $ph['endMs'], 'buckets' => []];
+        }
+        foreach ($tables as $i => $t) {
+            $losses[] = (int) $t['totalTime'] - (int) $t['combatTime'];
+            $phases[$owners[$i]]['buckets'][] = [
+                'tt' => (int) $t['totalTime'],
+                'down' => (int) $t['damageDowntime'],
+                'e' => array_map(fn($e) => [
+                    'name' => $e['name'] ?? '?',
+                    'type' => $e['type'] ?? '',
+                    'total' => (int) round($e['total'] ?? 0),
+                    'rdps' => (int) round($e['totalRDPS'] ?? $e['total'] ?? 0),
+                    'adps' => (int) round($e['totalADPS'] ?? $e['total'] ?? 0),
+                    'active' => (int) ($e['activeTime'] ?? 0),
+                ], $t['entries']),
+            ];
+        }
+        sort($losses);
+
+        $index = [
+            'loss' => $losses ? $losses[intdiv(count($losses), 2)] : 0,
+            'fightEnd' => $et,
+            'dd' => self::damageDownArgs($fight),
+            'ctx' => $this->lossContext($code, $fightId, $st, $et),
+            'phases' => $phases,
+        ];
+        if ($hideNames) {
+            // 別名の付け方は比較のとき（FFLogsController::compare の anonymize）と同じ
+            $index = $this->anonymize($index, $this->roster($code, $fightId), $label);
+            $index['anon'] = true;
+        }
+
+        // 稼働時間の足し戻し量（1 境目あたり、人ごと）。フェーズカードの Active% と区間の和の差から求める
+        foreach ($side['phases'] as $ph) {
+            $p = &$index['phases'][$ph['id']];
+            $n = count($p['buckets']);
+            $tt = array_sum(array_column($p['buckets'], 'tt'));
+            $sum = [];
+            foreach ($p['buckets'] as $b) {
+                foreach ($b['e'] as $e) {
+                    $sum[$e['name']] = ($sum[$e['name']] ?? 0) + $e['active'];
+                }
+            }
+            $p['activeFix'] = [];
+            foreach ($ph['summary']['players'] ?? [] as $pl) {
+                if ($n > 1 && isset($sum[$pl['name']])) {
+                    $p['activeFix'][$pl['name']] = (int) max(0, round(($pl['activePct'] / 100 * $tt - $sum[$pl['name']]) / ($n - 1)));
+                }
+            }
+            unset($p);
+        }
+        return $index;
+    }
+
+    /**
+     * buildRangeIndex の取り置きから、フェーズ内 [t0, t1) 秒（フェーズ開始から）を summarizeWindow と同じ形で集計する。
+     * 範囲は 10 秒の区間に広げて丸める。実際に集計した範囲を 'win' => [開始秒, 終了秒] で返す。
+     */
+    public function summarizeStoredWindow(array $index, int|string $pid, float $t0, float $t1): ?array
+    {
+        $ph = $index['phases'][$pid] ?? null;
+        if (!$ph || empty($ph['buckets'])) {
+            return null;
+        }
+        $n = count($ph['buckets']);
+        $i0 = max(0, (int) floor($t0 / self::SERIES_BUCKET_SEC));
+        $i1 = min($n, (int) ceil($t1 / self::SERIES_BUCKET_SEC));
+        if ($i1 <= $i0) {
+            return null;
+        }
+
+        $tt = 0;
+        $down = 0;
+        $byName = [];
+        for ($i = $i0; $i < $i1; $i++) {
+            $b = $ph['buckets'][$i];
+            $tt += $b['tt'];
+            $down += $b['down'];
+            foreach ($b['e'] as $e) {
+                $acc = $byName[$e['name']] ?? ['name' => $e['name'], 'type' => $e['type'], 'total' => 0, 'totalRDPS' => 0, 'totalADPS' => 0, 'activeTime' => 0];
+                $acc['total'] += $e['total'];
+                $acc['totalRDPS'] += $e['rdps'];
+                $acc['totalADPS'] += $e['adps'];
+                $acc['activeTime'] += $e['active'];
+                $byName[$e['name']] = $acc;
+            }
+        }
+        foreach ($byName as $name => &$e) {
+            $e['activeTime'] = min($tt, $e['activeTime'] + ($i1 - $i0 - 1) * ($ph['activeFix'][$name] ?? 0));
+        }
+        unset($e);
+
+        $start = $ph['start'] + $i0 * self::SERIES_BUCKET_SEC * 1000;
+        $end = min($ph['end'], $ph['start'] + $i1 * self::SERIES_BUCKET_SEC * 1000);
+        $table = ['entries' => array_values($byName), 'combatTime' => $tt - $index['loss'], 'totalTime' => $tt, 'damageDowntime' => $down];
+        $summary = $this->finishWindow($table, $start, $end, (float) $index['fightEnd'], $index['ctx'], $index['dd']);
+        if (!empty($index['anon'])) {
+            // アドバイス文で「SCH(A)（SCH(A)）」と重ねないための印（anonymize と同じ）
+            foreach ($summary['players'] as &$p) {
+                $p['anon'] = true;
+            }
+            unset($p);
+        }
+        $summary['win'] = [$i0 * self::SERIES_BUCKET_SEC, round(($end - $ph['start']) / 1000, 1)];
+        $summary['activeEstimated'] = true;
+        return $summary;
+    }
+
+    /** 窓の集計表から、フェーズカードと同じ材料（個人別・想定rDPS・死亡/デバフ）を作る。薬の上乗せ推定は省く */
+    private function finishWindow(array $table, float $start, float $end, float $fightEnd, array $ctx, array $ddArgs): array
+    {
+        $summary = $this->summarizeDamageTable($table, $start, $end);
         $ddr = MitigationSpec::damageDownRate(...$ddArgs);
         $ddKnown = MitigationSpec::damageDownRateKnown(...$ddArgs);
         // 薬の上乗せ推定は薬使用者ぶん追加問い合わせが走るので、任意範囲の再集計では省く
-        $this->enrichPlayerLosses($summary, $start, $end, $et, $ctx, $ddr, false, null, null, $ddKnown);
+        $this->enrichPlayerLosses($summary, $start, $end, $fightEnd, $ctx, $ddr, false, null, null, $ddKnown);
 
         $summary['partyPotentialRdps'] = array_sum(array_map(
             fn($p) => $p['potentialRdps'] ?? $p['rdps'],
@@ -972,5 +1132,26 @@ class ReportComparer
         $summary['sec'] = round($summary['sec'], 1);
         $summary['combatSec'] = round($summary['combatSec'], 1);
         return $summary;
+    }
+
+    private function cachedFight(string $code, int $fightId): ?array
+    {
+        return Cache::remember("fflogs:fight:{$code}:{$fightId}", 1800, fn() => $this->fflogs->getFightDetails($code, $fightId));
+    }
+
+    private function lossContext(string $code, int $fightId, float $st, float $et): array
+    {
+        return Cache::remember("fflogs:losscontext:{$code}:{$fightId}", 1800, function () use ($code, $fightId, $st, $et) {
+            $master = $this->fflogs->getMasterData($code);
+            $actors = collect($master['actors'] ?? [])->keyBy('id');
+            $abilities = collect($master['abilities'] ?? [])->keyBy('gameID');
+            return $this->buildLossContext($code, $fightId, $st, $et, $actors, $abilities);
+        });
+    }
+
+    /** MitigationSpec::damageDownRate の引数（ファイト名・ゾーン名・エンカウンターID） */
+    private static function damageDownArgs(array $fight): array
+    {
+        return [$fight['name'] ?? '', $fight['gameZone']['name'] ?? '', (int) ($fight['encounterID'] ?? 0)];
     }
 }

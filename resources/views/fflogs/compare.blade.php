@@ -542,8 +542,11 @@
 
             const BW = 10;                                   // グラフのバケット幅（秒）＝サーバ側 SERIES_BUCKET_SEC と揃える
             const RANGE_URL = @json(route('compare.range')); // 選択範囲の個人別rDPS再集計API
-            // 共有結果にはレポート番号がなく、閲覧者のAPIキーもないので、個人別の再集計は行わない（パーティ計と被攻撃は出す）
-            const CAN_REFETCH = @json(!($isShared ?? false));
+            // 範囲の再集計の出どころ。live＝FFLogsに問い合わせ（一時結果）、shared＝共有を作るときに取り置いた
+            // 10秒区間の集計から出す（レポート番号も閲覧者のキーも使わない）、none＝取り置きのない古い共有（概算だけ）
+            const RANGE_MODE = @json(!($isShared ?? false) ? 'live' : ((!empty($A['rangeIndex']) || !empty($B['rangeIndex'])) ? 'shared' : 'none'));
+            const SHARE_RANGE_URL = @json(($isShared ?? false) && isset($shareId) ? route('timeline-shares.range', $shareId) : null);
+            const CAN_REFETCH = RANGE_MODE !== 'none';
             const HIDE_NAMES = @json((bool) ($hideNames ?? false));
             const fmtT = s => Math.floor(s / 60) + ':' + String(Math.round(s % 60)).padStart(2, '0');
             const nf = n => Math.round(n).toLocaleString();
@@ -883,7 +886,7 @@
                         }
                     }
                     out.push(provisional
-                        ? '<span class="ts-prov">' + (CAN_REFETCH ? '概算・FFLogsで再集計中…' : '概算') + '</span>'
+                        ? '<span class="ts-prov">' + (CAN_REFETCH ? '概算・再集計中…' : '概算') + '</span>'
                         : '<span class="ts-conf">FFLogs基準</span>');
                     return out.join(' ');
                 }
@@ -908,6 +911,17 @@
                     return j;
                 }
 
+                /** 共有：選択範囲（フェーズ開始からの秒）を取り置きから集計してもらう。名前を伏せた共有は別名で保存済み */
+                async function fetchShared(t0, t1) {
+                    const q = new URLSearchParams({ phase: card.dataset.pid, t0: String(t0), t1: String(t1) });
+                    const key = 'shared:' + q.toString();
+                    if (rangeCache.has(key)) return rangeCache.get(key);
+                    const r = await fetch(SHARE_RANGE_URL + '?' + q.toString(), { headers: { 'Accept': 'application/json' } });
+                    const j = r.ok ? await r.json() : await r.json().catch(() => ({})).then(e => ({ error: e.error || ('HTTP ' + r.status) }));
+                    if (!j.error) rangeCache.set(key, j);
+                    return j;
+                }
+
                 /** 選択範囲をFFLogsで再集計し、パーティ計を確定値に差し替えたうえで
                  *  フェーズカードと同じ3ブロック（不足側アドバイス／ロールペア別／個人別バー）を描き直す。
                  *  個人別rDPSはシナジー配分（rDPSの本体）が絡むため生ダメージからは復元できず、サーバ経由が必須。 */
@@ -916,10 +930,10 @@
                     const box = panel.querySelector('.ts-detail');
                     if (!box) return;
                     if (!CAN_REFETCH) {
-                        box.innerHTML = '<span class="text-secondary text-base">共有結果では、範囲の個人別rDPSは再集計できません（パーティ計は概算値です）。</span>';
+                        box.innerHTML = '<span class="text-warning text-base">この共有は範囲の再集計に対応する前に作られたため、範囲の個人別rDPSは出せません（パーティ計は概算値です）。作成者が共有を作り直すと対応します。</span>';
                         return;
                     }
-                    box.innerHTML = '<span class="text-secondary text-base">FFLogsで再集計中…</span>';
+                    box.innerHTML = '<span class="text-secondary text-base">' + (RANGE_MODE === 'shared' ? '再集計中…' : 'FFLogsで再集計中…') + '</span>';
 
                     // A/Bでフェーズ長が違うと、片方だけ選択範囲がフェーズ末尾をはみ出す。
                     // はみ出したぶんを黙って詰めると「20秒 vs 6秒」を並べることになり
@@ -938,7 +952,7 @@
 
                     let res;
                     try {
-                        res = await fetchRange(win);
+                        res = RANGE_MODE === 'shared' ? await fetchShared(t0, t1) : await fetchRange(win);
                     } catch (e) {
                         res = { error: e.message };
                     }
@@ -954,8 +968,12 @@
                     const vals = panel.querySelector('.ts-vals');
                     if (vals) vals.innerHTML = valsHtml(res.a && res.a.partyRdps, res.b && res.b.partyRdps, false, res);
 
-                    // フェーズ長の差で範囲がズレたときの警告（黙って違う長さを比較させない）
-                    const wa = win.a, wb = win.b;
+                    // フェーズ長の差で範囲がズレたときの警告（黙って違う長さを比較させない）。
+                    // 共有では10秒単位に丸めた実際の範囲がサーバーから返る
+                    const winOf = x => (x && x.win ? { t0: x.win[0], t1: x.win[1] } : null);
+                    const wa = RANGE_MODE === 'shared' ? winOf(res.a) : win.a;
+                    const wb = RANGE_MODE === 'shared' ? winOf(res.b) : win.b;
+                    const shown = wa || wb || { t0: t0, t1: t1 };
                     const wlen = w => Math.round(w.t1 - w.t0);
                     let html = '';
                     if (wa && wb && Math.abs(wlen(wa) - wlen(wb)) >= 1) {
@@ -970,12 +988,16 @@
 
                     // 3ブロック（不足側アドバイス／ロールペア別／個人別ミラーバー）は
                     // フェーズカードと同じ Blade パーシャルをサーバ側で描画したもの。JSでは組み立てず、カードの元の欄と入れ替える。
-                    applyCard(res, fmtT(t0) + '–' + fmtT(t1));
+                    applyCard(res, fmtT(shown.t0) + '–' + fmtT(shown.t1));
+                    if (RANGE_MODE === 'shared') {
+                        html += '<div class="ts-note">共有では、作成時に取り置いた10秒ごとの集計から出しています（範囲は ' + fmtT(shown.t0) + '–' + fmtT(shown.t1) +
+                            ' に丸めました）。rDPS・総ダメージはFFLogsと同じ値、Active%（稼働率）は推定です。</div>';
+                    }
                     html += '<div class="ts-note text-yellow">↓ このフェーズのカード（パーティ計・不足側の分析・ロールペア別・個人別）を選択範囲の値に置き換えました。「解除」かダブルクリックで元に戻ります。</div>';
 
                     const secs = [res.a, res.b].filter(Boolean).map(x => nf(x.combatSec) + 's').join(' / ');
                     html += '<div class="ts-note">rDPSの分母はFFLogsと同じ「ボスが攻撃可能だった実時間」（この範囲では ' + esc(secs) +
-                        '）。壁時計の ' + (t1 - t0) + 's とは一致しません。薬の推定上乗せDPSは範囲集計では出していません。</div>';
+                        '）。壁時計の ' + Math.round(shown.t1 - shown.t0) + 's とは一致しません。薬の推定上乗せDPSは範囲集計では出していません。</div>';
                     box.innerHTML = html;
                 }
 

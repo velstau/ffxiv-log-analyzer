@@ -163,7 +163,16 @@ class FFLogsController extends Controller
                 ? $this->comparer->anonymize($sum, $this->comparer->roster($sd['code'], $sd['fightId']), strtoupper($k))
                 : $sum;
         }
-        $out['advice'] = $this->comparer->buildPhaseAdvice($out['a'] ?? null, $out['b'] ?? null);
+        return response()->json(self::rangePayload($this->comparer, $out));
+    }
+
+    /**
+     * 範囲の再集計の応答（A/B の集計に、不足側アドバイスとフェーズカードと同じ3ブロックの HTML を足す）。
+     * 共有画面の範囲集計（TimelineShareController::range）も同じ形で返す。
+     */
+    public static function rangePayload(ReportComparer $comparer, array $out): array
+    {
+        $out['advice'] = $comparer->buildPhaseAdvice($out['a'] ?? null, $out['b'] ?? null);
 
         // 表示部分はフェーズカードと同じパーシャルをサーバ側で描画して返す。
         // ブラウザ側で組み直すと同じ見た目を二重実装することになり、片方だけ直して食い違うため。
@@ -174,7 +183,7 @@ class FFLogsController extends Controller
             'scope' => 'この範囲',
         ])->render();
 
-        return response()->json($out);
+        return $out;
     }
 
 }

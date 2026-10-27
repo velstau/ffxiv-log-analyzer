@@ -430,6 +430,44 @@ GQL;
     }
 
     /**
+     * getDamageTable を複数の窓についてまとめて取る（GraphQL のエイリアスで 1 回に 30 窓まで）。
+     * 共有用に 10 秒区間の集計を取り置くときに使う。1 窓あたり約 1 ポイント（2026-10-27 実測）。
+     *
+     * @param  array<int, array{0: float, 1: float}> $windows [[開始ms, 終了ms], ...]
+     * @return array<int, array> $windows と同じ並びの getDamageTable と同じ形。取れなければ例外
+     */
+    public function getDamageTables($code, $fightId, array $windows): array
+    {
+        $out = [];
+        foreach (array_chunk($windows, 30, true) as $chunk) {
+            $parts = [];
+            foreach ($chunk as $i => [$s, $e]) {
+                $parts[] = sprintf('t%d: table(dataType: DamageDone, fightIDs: [$f], startTime: %.0F, endTime: %.0F)', $i, $s, $e);
+            }
+            $query = 'query($c: String!, $f: Int!) { reportData { report(code: $c) { ' . implode(' ', $parts) . ' } } }';
+            $response = Http::timeout(60)->withToken($this->getToken())->post($this->apiUrl, [
+                'query' => $query,
+                'variables' => ['c' => $code, 'f' => (int) $fightId],
+            ]);
+            $report = $response->json()['data']['reportData']['report'] ?? null;
+            foreach ($chunk as $i => $w) {
+                $tbl = $report['t' . $i] ?? null;
+                if (!is_array($tbl)) {
+                    throw new \RuntimeException('FFLogs の集計表を取得できませんでした。');
+                }
+                $data = $tbl['data'] ?? $tbl;
+                $out[$i] = [
+                    'entries' => $data['entries'] ?? [],
+                    'combatTime' => $data['combatTime'] ?? 0,
+                    'totalTime' => $data['totalTime'] ?? 0,
+                    'damageDowntime' => $data['damageDowntime'] ?? 0,
+                ];
+            }
+        }
+        return $out;
+    }
+
+    /**
      * 指定期間に「各敵（ボス／雑魚）が受けた総ダメージ」テーブルを取得。
      * dataType: DamageTaken + hostilityType: Enemies で、敵アクター別の被ダメージ合計が返る。
      * フェーズ窓を渡せば「そのフェーズでどの敵にどれだけ火力を割いたか」が分かる（A/B比較用）。
