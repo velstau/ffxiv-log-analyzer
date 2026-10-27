@@ -19,12 +19,11 @@
                 <button type="button" id="toggle-players" class="btn btn-outline-primary active" aria-pressed="true" onclick="togglePlayers()" title="プレイヤー列の表示切替"><x-ui-icon name="users" />プレイヤー列</button>
                 <button type="button" class="btn" onclick="openActionFilterModal()" title="技の表示を絞り込む"><x-ui-icon name="filter" />技フィルター</button>
             </div>
-            <div class="analysis-action-group" role="group" aria-label="保存と共有">
-                <button type="button" class="btn btn-primary" onclick="downloadHojoringXML()" title="タイムラインをXMLで保存"><x-ui-icon name="files" />XML出力</button>
-                @if (($shareDraft ?? false) || ($isShared ?? false))
+            @if (($shareDraft ?? false) || ($isShared ?? false))
+                <div class="analysis-action-group" role="group" aria-label="共有">
                     <button type="button" class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#timeline-share">{{ ($isShared ?? false) ? '共有URL・管理' : 'URLで共有' }}</button>
-                @endif
-            </div>
+                </div>
+            @endif
             <div class="analysis-action-group">
                 <a class="btn" href="{{ route('mitigation.form') }}">新しい解析</a>
             </div>

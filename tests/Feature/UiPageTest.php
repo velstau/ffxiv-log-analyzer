@@ -27,7 +27,7 @@ class UiPageTest extends TestCase
         foreach ([true, false] as $hasPhases) {
             $this->view('fflogs.timeline', UiData::timeline($hasPhases))
                 ->assertSee('UI fixture')->assertSee('id="mitigation-table"', false)
-                ->assertSee('downloadHojoringXML()')->assertDontSee('onclick="saveFullTimeline()"', false)
+                ->assertDontSee('downloadHojoringXML()')->assertDontSee('onclick="saveFullTimeline()"', false)
                 ->assertSee('mit-used')->assertSee('mit-on')->assertSee('mit-up')
                 ->assertSee('mit-cd')->assertSee('mit-x')->assertSee('mit-off')
                 ->assertSee('timeline-xrange')->assertSee('000000-000806.png');

@@ -34,9 +34,6 @@ with sync_playwright() as pw:
     reader.locator('#mitigation-table tbody .c-hit').first.click()
     expect(reader.locator('#damageDetailModal')).to_be_visible()
     reader.keyboard.press('Escape')
-    with reader.expect_download() as download:
-        reader.locator('[onclick="downloadHojoringXML()"] ').click()
-    assert download.value.suggested_filename.endswith('.xml')
     reader.get_by_role('button', name='共有URL・管理', exact=True).click()
     expect(reader.locator('#timeline-share-url')).to_have_value(url)
     reader.get_by_role('button', name='コピー', exact=True).click()
@@ -52,5 +49,5 @@ with sync_playwright() as pw:
     response = reader.goto(url, wait_until='networkidle')
     assert response.status == 404
     expect(reader.get_by_text('共有結果を表示できません', exact=True)).to_be_visible()
-    print('PASS: create, API-key-free guest, details, XML, copy, owner deletion, guest 404; no JS errors')
+    print('PASS: create, API-key-free guest, details, copy, owner deletion, guest 404; no JS errors')
     browser.close()

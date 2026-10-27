@@ -93,7 +93,7 @@ class TimelineShareTest extends TestCase
         session()->forget('timeline_share_owner');
         Cache::flush(); // Shared results must survive ordinary analysis cache eviction.
         $this->get($share['url'])->assertOk()->assertSee('共有結果（APIキー不要）')
-            ->assertSee('UI fixture')->assertSee('Player 1')->assertSee('XML出力')->assertDontSee('onclick="saveFullTimeline()"', false)
+            ->assertSee('UI fixture')->assertSee('Player 1')->assertDontSee('XML出力')->assertDontSee('onclick="saveFullTimeline()"', false)
             ->assertDontSee('共有を停止する')->assertHeader('X-Robots-Tag', 'noindex, nofollow, noarchive')
             ->assertHeader('Referrer-Policy', 'no-referrer');
         Http::assertNothingSent();

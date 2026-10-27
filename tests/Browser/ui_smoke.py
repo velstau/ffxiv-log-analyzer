@@ -81,10 +81,6 @@ with sync_playwright() as pw:
         expect(page.locator('#damageDetailModal')).to_be_visible()
         assert page.locator('#damageDetailContent').inner_text().strip()
         page.keyboard.press('Escape')
-        with page.expect_download() as download:
-            page.locator('[onclick="downloadHojoringXML()"] ').click()
-        download.value.save_as(OUT / f'timeline-phase{phase}.xml')
-        assert '<' in (OUT / f'timeline-phase{phase}.xml').read_text()
         # Original player detail image output uses the same shared capture routine.
         page.evaluate('openPlayerTimeline(Object.keys(window.playerDetails)[0])')
         expect(page.locator('#playerTimelineModal')).to_be_visible()
