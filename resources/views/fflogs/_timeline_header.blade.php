@@ -5,6 +5,9 @@
             <span class="text-secondary" aria-hidden="true">／</span>
             <h1 class="m-0" title="軽減・バリア解析結果">{{ $fight['name'] }}</h1>
             <span class="text-secondary text-nowrap">戦闘時間 <strong class="text-body">{{ gmdate('i:s', ($fight['endTime'] - $fight['startTime']) / 1000) }}</strong></span>
+            @if ($hideNames ?? false)
+                <span class="badge bg-purple-lt" title="プレイヤー名はジョブ名（同じジョブが2人なら SCH1・SCH2）で表示しています">プレイヤー名を非表示</span>
+            @endif
             @if ($isShared ?? false)
                 <span class="badge bg-blue-lt" title="有効期限：{{ $shareExpiresAt }}">共有結果（APIキー不要）</span>
             @elseif ($cachedResult ?? false)

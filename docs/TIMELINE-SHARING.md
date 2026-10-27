@@ -119,6 +119,16 @@ DPS比較（`/compare`）も軽減・バリアと同じ仕組みに載せた。�
 - 共有には FFLogs のレポート番号（`A.code`・`B.code`・`fightId`）を残さない。そのため共有画面では、グラフの範囲選択で
   パーティ計の概算と被攻撃は出すが、個人別 rDPS の再集計（`/compare/range`。閲覧者の API キーが要る）は行わない。
 - フォームの「プレイヤー名を表示しない」を選ぶと、下書きに入れる前に実名を「SCH(A)」に置き換える（`ReportComparer::anonymize`）。
-  同じジョブが複数いるときは実名順に「(1)」「(2)」を付け、フェーズ・範囲で同じ人は同じ別名になる。
+  同じジョブが複数いるときは実名順に番号を付け（SCH(A1)・SCH(A2)）、フェーズ・範囲で同じ人は同じ別名になる。
   範囲の再集計は `anon=1` で同じ別名を返す。参加者の表（実名 => ジョブ）は `fflogs:roster:{code}:{fightId}` に 30 分キャッシュする。
 - 関係するテスト: `tests/Feature/CompareShareTest.php`、`tests/Browser/ui_smoke.py`（`/__ui/compare?hide=1`）。
+
+## 軽減・バリアの名前非表示（2026-10-27）
+
+- 軽減分析のフォーム（`/mitigation`）にも「プレイヤー名を表示しない」を置いた。`FFLogsController::analyze` が、下書きに入れる前に
+  実名を「SCH」（同じジョブが複数なら実名順に SCH1・SCH2）に置き換え、`hideNames` を下書き・共有に残す（ヘッダーのバッジと共有の注記に使う）。
+- 参加者の表（実名 => ジョブ略称）は `TimelineBuilder::build` が `roster` として返す（被弾しなかった人も含めるため masterData から引く）。
+  `roster` は置き換えに使った後で捨て、下書き・共有には入れない。
+- 置き換えは比較と共通の `App\Support\PlayerAliases`。実名は軽減の使用者・シナジー・死因・文章の中などあちこちに入るので、
+  項目を列挙せず、配列全体の値とキーを部分一致で置き換える。
+- 関係するテスト: `tests/Feature/MitigationHideNamesTest.php`、`tests/Browser/ui_smoke.py`（`/__ui/timeline?hide=1`）。

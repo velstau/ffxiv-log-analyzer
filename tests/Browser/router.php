@@ -52,6 +52,10 @@ $mock->shouldReceive('getZoneTree')->andReturn(Tests\Fixtures\UiData::zones());
 $app->instance(App\Services\FFLogsService::class, $mock);
 Illuminate\Support\Facades\Route::middleware('web')->get('/__ui/timeline', function (Illuminate\Http\Request $request) {
     $data = Tests\Fixtures\UiData::timeline(request('phase', '1') === '1');
+    if ($data['hideNames'] = request('hide') === '1') {
+        $abbr = App\Support\FFXIVJobs::abbrByType();
+        $data = App\Support\PlayerAliases::apply($data, App\Support\PlayerAliases::make(array_map(fn($p) => $abbr[$p['job']] ?? null, $data['playerDetails'])));
+    }
     $data['shareDraft'] = app(App\Services\TimelineShareStore::class)->draft($data, App\Http\Controllers\TimelineShareController::owner($request));
     return redirect()->route('timeline-results.show', $data['shareDraft']);
 });

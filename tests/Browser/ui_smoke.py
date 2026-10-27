@@ -45,6 +45,11 @@ with sync_playwright() as pw:
                 })''')
             page.screenshot(path=str(OUT / f'{label}-{width}.png'), full_page=True)
     page.set_viewport_size({'width': 1440, 'height': 900})
+    # Hidden names: headers show job aliases and the badge, no real names remain.
+    visit('/__ui/timeline?hide=1')
+    expect(page.locator('.timeline-toolbar')).to_contain_text('プレイヤー名を非表示')
+    expect(page.locator('#mitigation-table thead')).to_contain_text('SCH')
+    assert 'Player 1' not in page.content()
     for phase in ('1', '0'):
         visit('/__ui/timeline?phase=' + phase)
         slider = page.locator('#timeline-xrange')

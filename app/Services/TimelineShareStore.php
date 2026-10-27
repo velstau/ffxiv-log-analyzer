@@ -21,7 +21,7 @@ class TimelineShareStore
     private const META = 'timeline-shares/meta/';
     /** 種別ごとに保存する項目。種別のない古い共有は timeline（軽減・バリア）とみなす */
     private const KEYS = [
-        'timeline' => ['fight', 'events', 'playerColumns', 'mitigationColumns', 'mitigationGroups', 'mitigationGroupIcons', 'playerDetails', 'playerTimelines', 'start_time', 'synergyWindows', 'deaths', 'hasPhases'],
+        'timeline' => ['fight', 'events', 'playerColumns', 'mitigationColumns', 'mitigationGroups', 'mitigationGroupIcons', 'playerDetails', 'playerTimelines', 'start_time', 'synergyWindows', 'deaths', 'hasPhases', 'hideNames'],
         'compare' => ['A', 'B', 'phaseIds', 'advice', 'hideNames'],
     ];
 

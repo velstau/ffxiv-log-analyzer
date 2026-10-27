@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Support\MitigationSpec;
+use App\Support\PlayerAliases;
 use App\Support\TimelineJobMeta;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
@@ -578,7 +579,7 @@ class ReportComparer
      *
      * 同じジョブが複数いるときの番号は実名順で決める。フェーズや範囲ごとに rDPS 順で振ると、
      * 同じ人の別名が場所によって変わるため。実名はプレイヤー一覧のほか、クローズドポジションの
-     * 付与先などにも入るので、項目を列挙せず、配列全体で実名と完全に一致する文字列を置き換える。
+     * 付与先などにも入るので、項目を列挙せず、配列全体を置き換える（PlayerAliases）。
      */
     public function anonymize(array $data, array $roster, string $label): array
     {
@@ -596,37 +597,7 @@ class ReportComparer
         };
         $collect($data);
 
-        ksort($roster, SORT_STRING);
-        $byJob = [];
-        foreach ($roster as $name => $job) {
-            $byJob[$job][] = (string) $name;
-        }
-        $alias = [];
-        foreach ($byJob as $job => $names) {
-            foreach ($names as $i => $name) {
-                $alias[$name] = "{$job}({$label}" . (count($names) > 1 ? (string) ($i + 1) : '') . ')';
-            }
-        }
-
-        $replace = function ($v) use (&$replace, $alias) {
-            if (is_string($v)) {
-                return $alias[$v] ?? $v;
-            }
-            if (!is_array($v)) {
-                return $v;
-            }
-            $out = [];
-            foreach ($v as $k => $item) {
-                $renamed = is_string($item) && isset($alias[$item]);
-                $item = $replace($item);
-                $out[is_string($k) ? ($alias[$k] ?? $k) : $k] = $item;
-                if ($k === 'name' && $renamed) {
-                    $out['anon'] = true; // アドバイス文で「SCH（SCH(A)）」と重ねないための印
-                }
-            }
-            return $out;
-        };
-        return $replace($data);
+        return PlayerAliases::apply($data, PlayerAliases::make($roster, $label), true);
     }
 
     /**

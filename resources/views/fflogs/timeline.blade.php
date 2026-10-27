@@ -703,7 +703,7 @@
 
     @include('_copyright', ['compact' => true])
 @if (($shareDraft ?? false) || ($isShared ?? false))
-    @include('fflogs._timeline_share')
+    @include('fflogs._timeline_share', ($hideNames ?? false) ? ['shareNotice' => 'プレイヤー名は「SCH」のようなジョブ名で保存され、実名は共有されません。APIキーも共有されません。'] : [])
     @endif
 </body>
 

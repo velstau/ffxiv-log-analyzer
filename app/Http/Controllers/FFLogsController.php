@@ -7,6 +7,7 @@ use App\Services\FFLogsService;
 use App\Services\ReportComparer;
 use App\Services\TimelineBuilder;
 use App\Services\TimelineShareStore;
+use App\Support\PlayerAliases;
 use Illuminate\Http\Request;
 
 class FFLogsController extends Controller
@@ -41,6 +42,13 @@ class FFLogsController extends Controller
         } catch (FFLogsRequestFailed $e) {
             return back()->with('error', $e->getMessage())->withInput();
         }
+
+        // 名前を伏せるときは、一時保存・共有の前に置き換える（実名を保存しない）
+        $data['hideNames'] = $request->boolean('hide_names');
+        if ($data['hideNames']) {
+            $data = PlayerAliases::apply($data, PlayerAliases::make($data['roster'] ?? []));
+        }
+        unset($data['roster']);
 
         try {
             $draft = app(TimelineShareStore::class)->draft($data, TimelineShareController::owner($request));

@@ -185,6 +185,18 @@ class TimelineBuilder
             $playerStats,
             $startTime,
         );
+        // 名前を伏せるとき（FFLogsController::analyze）に使う、この戦闘の参加者 実名 => ジョブ略称。
+        // 被弾しなかった人や表に出ない人も伏せるため、masterData から引く
+        $abbrByType = FFXIVJobs::abbrByType();
+        $roster = [];
+        foreach ($masterActors as $actor) {
+            if (($actor['type'] ?? '') === 'Player' && in_array($actor['id'] ?? null, $fight['friendlyPlayers'] ?? []) && isset($actor['name'])) {
+                $roster[$actor['name']] = $abbrByType[$actor['subType'] ?? ''] ?? null;
+            }
+        }
+        foreach ($playerDetails as $name => $p) {
+            $roster[$name] ??= $p['job'] ?? null;
+        }
         return compact(
             'fight',
             'events',
@@ -198,6 +210,7 @@ class TimelineBuilder
             'synergyWindows',
             'deaths',
             'hasPhases',
+            'roster',
         );
     }
 

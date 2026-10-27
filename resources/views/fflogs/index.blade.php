@@ -32,6 +32,18 @@
                     例: https://ja.fflogs.com/reports/XXXXXXXXXXXXXXXX?fight=11
                 </p>
             </div>
+            <label class="form-check">
+                <input class="form-check-input" type="checkbox" name="hide_names" value="1" id="hide_names">
+                <span class="form-check-label">プレイヤー名を表示しない（「SCH」のようにジョブで表示。共有URLにも実名を残しません）</span>
+            </label>
+            <script>
+                // 前回の選択を覚えておく（このブラウザだけ）
+                (function () {
+                    const box = document.getElementById('hide_names');
+                    try { box.checked = localStorage.getItem('mitigation.hideNames') === '1'; } catch (e) {}
+                    box.addEventListener('change', () => { try { localStorage.setItem('mitigation.hideNames', box.checked ? '1' : '0'); } catch (e) {} });
+                })();
+            </script>
 
             <button type="submit"
                 class="btn btn-primary legacy-w-full legacy-py-2 legacy-px-4 bg-primary  rounded fw-semibold text-white  ">
